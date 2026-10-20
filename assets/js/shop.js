@@ -22,6 +22,8 @@
     return;
   }
 
+  setStage(all.find(p => p.stock > 0 && p.images && p.images[0]));
+
   // Brand chips from what's actually in stock
   const brands = [...new Set(all.map(p => p.brand).filter(Boolean))].sort();
   chips.innerHTML = '<button class="chip active" data-brand="">All</button>' +
@@ -39,8 +41,9 @@
           <img src="${esc(cover(p))}" alt="${esc(p.name)}" loading="lazy">${tag}
         </div>
         <div class="card-body">
-          <span class="card-brand">${esc(p.brand)}${p.series ? ' · ' + esc(p.series) : ''}</span>
+          <span class="card-brand">${esc(p.brand)}</span>
           <span class="card-title">${esc(p.name)}</span>
+          ${p.series ? `<span class="card-series">${esc(p.series)}</span>` : ''}
           <div class="price-row">
             <span class="price">${money(p.price)}</span>
             ${off ? `<span class="mrp">${money(p.mrp)}</span><span class="off">${off}% off</span>` : ''}
@@ -58,6 +61,24 @@
     list.sort((a, b) => (b.stock > 0) - (a.stock > 0));   // in-stock first, keeps order otherwise
     grid.innerHTML = list.length ? list.map(card).join('')
       : `<p class="empty">${all.length ? 'No cars match your search.' : 'New cars are on the way — check back soon! 🏁'}</p>`;
+  }
+
+  // Hero showroom: newest in-stock car with a photo (logo until then)
+  function setStage(p) {
+    const C = window.MHC.C;
+    if (C.WHATSAPP_GROUP) { const g = document.getElementById('heroGroup'); g.href = C.WHATSAPP_GROUP; g.hidden = false; }
+    const img = document.getElementById('stageImg'), refl = document.getElementById('stageReflect');
+    const stage = document.getElementById('stage');
+    if (p) {
+      img.removeAttribute('data-logo'); img.src = p.images[0]; img.alt = p.name; img.classList.add('photo');
+      stage.href = 'product.html?id=' + encodeURIComponent(p.id);
+      const cap = document.getElementById('stageCaption');
+      cap.innerHTML = `<div><span>Newest arrival</span><b>${esc(p.name)}</b></div><b class="price">${money(p.price)}</b>`;
+      cap.hidden = false;
+      refl.parentElement.hidden = true;
+    } else {
+      refl.src = img.src;
+    }
   }
 
   chips.addEventListener('click', e => {

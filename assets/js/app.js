@@ -113,6 +113,10 @@
   const waLink = (number, text) =>
     `https://wa.me/${String(number || '').replace(/\D/g, '')}?text=${encodeURIComponent(text || '')}`;
 
+  // Logo: embedded copy from logo.js, falls back to the image file
+  const LOGO = window.MHC_LOGO || 'assets/img/logo-192.png';
+  function fillLogos() { document.querySelectorAll('img[data-logo]:not(.photo)').forEach(i => { i.src = LOGO; }); }
+
   // ---------- header / footer ----------
   function renderChrome() {
     const page = location.pathname.split('/').pop() || 'index.html';
@@ -123,7 +127,7 @@
       <header class="site-header">
         <div class="container nav">
           <a href="index.html" class="logo" aria-label="${esc(C.STORE_NAME)} home">
-            <span class="mark">⚡</span><span>MHC <span class="accent">Diecast</span></span>
+            <img class="logo-img" src="${LOGO}" alt="MHC Diecast logo" width="52" height="52"><span>MHC <span class="accent">Diecast</span></span>
           </a>
           <nav class="nav-links">
             ${link('index.html', 'Shop')}
@@ -134,21 +138,42 @@
         </div>
       </header>`;
     const footer = document.getElementById('siteFooter');
+    const phone = String(C.CONTACT_PHONE || '');
+    const phoneNice = phone.replace(/(\d{5})(\d{5})/, '$1 $2');
     if (footer) footer.innerHTML = `
       <footer class="site-footer">
-        <div class="container footer-inner">
+        <div class="container footer-grid">
           <div class="footer-brand">
-            <strong>${esc(C.STORE_NAME)}</strong> · Bicholim, Goa
-            <div class="footer-note">Free shipping across Goa · Pan-India delivery · Pay by UPI</div>
+            <img class="footer-logo" src="${LOGO}" alt="${esc(C.STORE_NAME)} logo" width="84" height="84" loading="lazy">
+            <div>
+              <strong>${esc(C.STORE_NAME)}</strong>
+              <div class="footer-note">Hot Wheels and 1:64 diecasts from Bicholim. Free shipping across Goa, delivery across India.</div>
+            </div>
           </div>
-          <nav class="footer-links">
-            <a href="index.html">Shop</a>
+          <div class="footer-col">
+            <h4>Shop</h4>
+            <a href="index.html">All cars</a>
             <a href="track.html">Track order</a>
             <a href="shipping.html">Shipping & returns</a>
             <a href="contact.html">Contact</a>
-          </nav>
+          </div>
+          <div class="footer-col">
+            <h4>Visit / call</h4>
+            <span>📍 ${esc(C.STORE_LOCATION || 'Goa')}</span>
+            ${phone ? `<a href="tel:+91${esc(phone)}">📞 +91 ${esc(phoneNice)}</a>
+            <a href="${esc(waLink('91' + phone, 'Hi MHC Diecast! '))}" target="_blank" rel="noopener">💬 WhatsApp us</a>` : ''}
+          </div>
+          <div class="footer-col">
+            <h4>Community</h4>
+            ${C.WHATSAPP_GROUP ? `<a class="footer-group" href="${esc(C.WHATSAPP_GROUP)}" target="_blank" rel="noopener">Join the WhatsApp group</a>
+            <span class="footer-note">New arrivals & drops first</span>` : ''}
+          </div>
         </div>
-        <div class="container footer-legal">© ${new Date().getFullYear()} ${esc(C.STORE_NAME)}. Hot Wheels and other brand names are trademarks of their owners; we are an independent seller.</div>
+        <div class="container footer-credits">
+          <span>Founder: ${C.FOUNDER_URL ? `<a href="${esc(C.FOUNDER_URL)}" target="_blank" rel="noopener">${esc(C.FOUNDER_NAME)}</a>` : esc(C.FOUNDER_NAME || '')}</span>
+          <span>Website designed by ${C.DESIGNER_URL ? `<a href="${esc(C.DESIGNER_URL)}" target="_blank" rel="noopener">${esc(C.DESIGNER_NAME)}</a>` : esc(C.DESIGNER_NAME || '')}</span>
+        </div>
+        <div class="container footer-legal">© ${new Date().getFullYear()} ${esc(C.STORE_NAME)}, ${esc(C.STORE_LOCATION || 'Goa')}. Hot Wheels and other brand names are trademarks of their owners; we are an independent seller.</div>
       </footer>`;
     updateCartCount();
     if (page !== 'checkout.html' && page !== 'admin.html') addWhatsAppButton();
@@ -189,7 +214,35 @@
   const errMsg = e => (e && (e.message || e.error_description)) || 'Something went wrong. Please try again.';
 
   window.addEventListener('storage', e => { if (e.key === CART_KEY) updateCartCount(); });
-  document.addEventListener('DOMContentLoaded', renderChrome);
+  // ---------- 3D tilt: cards, hero stage, product photo (fine pointers only) ----------
+  function enableTilt() {
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const targets = '.card:not(.skeleton), .stage, .gallery-main';
+    let active = null;
+    document.addEventListener('pointermove', e => {
+      const el = e.target.closest(targets);
+      if (active && active !== el) reset(active);
+      active = el;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      const max = el.classList.contains('card') ? 6 : 8;
+      const node = el.classList.contains('stage') ? el.querySelector('.stage-object') : el;
+      if (!node) return;
+      node.style.setProperty('--rx', ((0.5 - y) * max).toFixed(2) + 'deg');
+      node.style.setProperty('--ry', ((x - 0.5) * max).toFixed(2) + 'deg');
+      el.style.setProperty('--mx', (x * 100).toFixed(1) + '%');
+      el.style.setProperty('--my', (y * 100).toFixed(1) + '%');
+    }, { passive: true });
+    document.addEventListener('pointerleave', () => active && reset(active));
+    function reset(el) {
+      const node = el.classList.contains('stage') ? el.querySelector('.stage-object') : el;
+      if (node) { node.style.removeProperty('--rx'); node.style.removeProperty('--ry'); }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => { renderChrome(); fillLogos(); enableTilt(); });
 
   window.MHC = { C, sb, store, money, esc, param, isGoa, placeholder, cover, Cart,
                  getSettings, shippingFor, waLink, toast, errMsg, updateCartCount };

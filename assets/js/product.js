@@ -33,8 +33,9 @@
            <img src="${esc(src)}" alt=""></button>`).join('')}</div>` : ''}
     </div>
     <div class="details">
-      <span class="card-brand">${esc(p.brand)}${p.series ? ' · ' + esc(p.series) : ''}</span>
+      <span class="card-brand">${esc(p.brand)}</span>
       <h1 class="product-title">${esc(p.name)}</h1>
+      ${p.series ? `<span class="card-series">${esc(p.series)}</span>` : ''}
       <div class="price-row big">
         <span class="price">${money(p.price)}</span>
         ${off ? `<span class="mrp">MRP ${money(p.mrp)}</span><span class="off">${off}% off</span>` : ''}
