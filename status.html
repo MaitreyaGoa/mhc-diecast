@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>System Check — MHC Diecast</title>
+  <link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div id="siteHeader"></div>
+<main class="container narrow">
+  <h1 class="page-title">System check</h1>
+  <p class="muted">Tests the connection between this website and Supabase. Every line should turn ✅.</p>
+  <div class="panel"><ul class="checks" id="checks"></ul></div>
+  <p class="muted small">This page is for you only. Delete <code>status.html</code> before launch if you like — it exposes nothing private.</p>
+</main>
+<div id="siteFooter"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/status.js"></script>
+</body>
+</html>

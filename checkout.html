@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Checkout — MHC Diecast</title>
+  <meta name="theme-color" content="#FF6A13">
+  <link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div id="siteHeader"></div>
+
+<main class="container">
+  <ol class="steps" id="steps">
+    <li class="active">Address</li><li>Payment</li><li>Done</li>
+  </ol>
+
+  <div class="cart-layout">
+    <div>
+      <!-- STEP 1: delivery details -->
+      <form id="detailsForm" class="panel" novalidate>
+        <h2 class="panel-title">Delivery details</h2>
+        <div class="field"><label for="name">Full name *</label>
+          <input class="input" id="name" autocomplete="name" required></div>
+        <div class="two">
+          <div class="field"><label for="phone">Mobile number *</label>
+            <input class="input" id="phone" type="tel" inputmode="numeric" maxlength="10" autocomplete="tel-national" placeholder="10-digit number" required></div>
+          <div class="field"><label for="email">Email (optional)</label>
+            <input class="input" id="email" type="email" autocomplete="email"></div>
+        </div>
+        <div class="field"><label for="address">Address *</label>
+          <textarea class="input" id="address" rows="3" autocomplete="street-address" placeholder="House no., street, area, landmark" required></textarea></div>
+        <div class="three">
+          <div class="field"><label for="pincode">Pincode *</label>
+            <input class="input" id="pincode" inputmode="numeric" maxlength="6" autocomplete="postal-code" required></div>
+          <div class="field"><label for="city">City / Town</label>
+            <input class="input" id="city" autocomplete="address-level2"></div>
+          <div class="field"><label for="state">State</label>
+            <input class="input" id="state" autocomplete="address-level1"></div>
+        </div>
+        <div id="shipHint" class="ship-hint" hidden></div>
+        <p class="form-error" id="detailsError" hidden></p>
+        <button class="btn btn-primary btn-block" type="submit" id="toPay">Continue to payment</button>
+      </form>
+
+      <!-- STEP 2: pay by UPI + upload screenshot -->
+      <section id="payBox" class="panel" hidden>
+        <h2 class="panel-title">Pay <span id="payAmount" class="amount"></span> by UPI</h2>
+        <div class="pay-grid">
+          <div class="qr-wrap">
+            <div id="qr" class="qr"></div>
+            <a class="btn btn-dark btn-block upi-app" id="upiApp" href="#">Open UPI app to pay</a>
+          </div>
+          <div class="pay-info">
+            <ol class="pay-steps">
+              <li>Scan the QR with GPay, PhonePe, Paytm or any UPI app.</li>
+              <li>Pay exactly <b id="payAmount2"></b>.</li>
+              <li>Take a screenshot of the success screen and upload it below.</li>
+            </ol>
+            <div class="upi-id">UPI ID: <b id="upiId"></b> <button type="button" class="link-btn" id="copyUpi">Copy</button></div>
+            <div class="muted small" id="payee"></div>
+          </div>
+        </div>
+
+        <form id="payForm" novalidate>
+          <div class="field">
+            <label for="shot">Payment screenshot *</label>
+            <label class="upload" id="uploadBox">
+              <input type="file" id="shot" accept="image/*" required>
+              <span id="uploadText">📷 Tap to choose screenshot</span>
+              <img id="shotPreview" alt="Screenshot preview" hidden>
+            </label>
+          </div>
+          <div class="field"><label for="utr">UPI reference / UTR number (optional)</label>
+            <input class="input" id="utr" inputmode="numeric" maxlength="22" placeholder="12-digit number shown after payment"></div>
+          <p class="form-error" id="payError" hidden></p>
+          <button class="btn btn-primary btn-block" type="submit" id="placeBtn">Submit payment & place order</button>
+          <button class="link-btn back-link" type="button" id="backToDetails">← Edit delivery details</button>
+        </form>
+      </section>
+
+      <!-- STEP 3: success -->
+      <section id="doneBox" class="panel done-box" hidden>
+        <div class="done-ico">🏁</div>
+        <h2>Order placed!</h2>
+        <p>Your order code is</p>
+        <div class="order-code" id="orderCode"></div>
+        <p class="muted">We'll verify your payment and confirm the order shortly. Save this code to track your order.</p>
+        <div class="done-actions">
+          <a class="btn btn-primary" id="trackLink" href="track.html">Track order</a>
+          <a class="btn btn-ghost" id="waLink" target="_blank" rel="noopener" hidden>Message us on WhatsApp</a>
+          <a class="btn btn-ghost" href="index.html">Keep shopping</a>
+        </div>
+      </section>
+    </div>
+
+    <aside class="panel summary" id="summary">
+      <h2 class="panel-title">Order summary</h2>
+      <div id="sumItems"></div>
+      <div class="sum-row"><span>Subtotal</span><span id="sumSubtotal">—</span></div>
+      <div class="sum-row"><span>Shipping</span><span id="sumShipping">Enter pincode</span></div>
+      <div class="sum-row total"><span>Total</span><b id="sumTotal">—</b></div>
+    </aside>
+  </div>
+</main>
+
+<div id="siteFooter"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/checkout.js"></script>
+</body>
+</html>

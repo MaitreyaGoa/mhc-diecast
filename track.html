@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Track your order — MHC Diecast</title>
+  <meta name="theme-color" content="#FF6A13">
+  <link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div id="siteHeader"></div>
+
+<main class="container narrow">
+  <h1 class="page-title">Track your order</h1>
+  <form id="trackForm" class="panel" novalidate>
+    <div class="two">
+      <div class="field"><label for="code">Order code</label>
+        <input class="input" id="code" placeholder="MHC-XXXXXX" autocapitalize="characters" required></div>
+      <div class="field"><label for="phone">Mobile number</label>
+        <input class="input" id="phone" type="tel" inputmode="numeric" maxlength="10" required></div>
+    </div>
+    <p class="form-error" id="trackError" hidden></p>
+    <button class="btn btn-primary btn-block" type="submit" id="trackBtn">Check status</button>
+  </form>
+
+  <section id="result"></section>
+  <section id="recent"></section>
+</main>
+
+<div id="siteFooter"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/track.js"></script>
+</body>
+</html>
