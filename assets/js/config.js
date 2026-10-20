@@ -14,6 +14,15 @@ window.MHC_CONFIG = {
   // 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tYW9uaXVkeWFtZHlmenJ4anh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODE2MDksImV4cCI6MjEwODA1NzYwOX0.w-JZwR8pOP0PqmQkbKeEb61-S9pSJ_oG2OpznOaFtXk'
 
   STORE_NAME: 'MHC Diecast',
+
+  // Shown in the footer and on the Contact page
+  STORE_LOCATION: 'Bicholim, Goa',
+  CONTACT_PHONE:  '7358425108',
+  WHATSAPP_GROUP: 'https://chat.whatsapp.com/EPPQ0rsOrZoKdSJHfGtSmP',
+  FOUNDER_NAME:   'Maitreya Hinde',
+  FOUNDER_URL:    'https://www.facebook.com/MaitreyaHinde/',
+  DESIGNER_NAME:  'MHC Digital',
+  DESIGNER_URL:   'https://www.facebook.com/MHCdigital',
   CURRENCY:   '₹',
   GOA_PINCODE_PREFIX: '403'      // free shipping for these pincodes
 };
