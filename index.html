@@ -6,22 +6,12 @@
   <title>MHC Diecast — Hot Wheels & Diecast Cars in Goa</title>
   <meta name="description" content="Buy Hot Wheels and 1:64 diecast cars in Goa. Free shipping across Goa, delivery across India.">
   <meta name="theme-color" content="#FF6A13">
+  <meta property="og:title" content="MHC Diecast — Hot Wheels & Diecast Cars in Goa">
+  <meta property="og:description" content="Free shipping across Goa · Pan-India delivery · Pay by UPI">
   <link rel="stylesheet" href="assets/css/theme.css">
 </head>
 <body>
-
-<header class="site-header">
-  <div class="container nav">
-    <a href="index.html" class="logo" aria-label="MHC Diecast home">
-      <span class="mark">⚡</span><span>MHC <span class="accent">Diecast</span></span>
-    </a>
-    <nav class="nav-links">
-      <a href="index.html">Shop</a>
-      <a href="track.html" class="hide-sm">Track order</a>
-      <a href="cart.html" class="cart-btn" aria-label="Cart">🛒 <span class="cart-count" id="cartCount">0</span></a>
-    </nav>
-  </div>
-</header>
+<div id="siteHeader"></div>
 
 <main class="container">
   <section class="hero">
@@ -37,72 +27,25 @@
   <div class="track" aria-hidden="true"></div>
 
   <div class="toolbar">
-    <div class="chips" id="brandChips">
-      <button class="chip active" data-brand="">All</button>
-      <button class="chip" data-brand="Hot Wheels">Hot Wheels</button>
-      <button class="chip" data-brand="Matchbox">Matchbox</button>
-      <button class="chip" data-brand="Mini GT">Mini GT</button>
-    </div>
+    <div class="chips" id="brandChips"><button class="chip active" data-brand="">All</button></div>
     <label class="sr-only" for="search">Search cars</label>
     <input class="search" id="search" type="search" placeholder="Search cars…">
+    <label class="sr-only" for="sort">Sort</label>
+    <select class="search sort" id="sort">
+      <option value="new">Newest</option>
+      <option value="low">Price: low to high</option>
+      <option value="high">Price: high to low</option>
+    </select>
   </div>
 
-  <!-- Phase 1 preview: sample cards so you can see the look.
-       In Phase 2 these come live from the database. -->
-  <section class="grid" id="productGrid"></section>
+  <section class="grid" id="productGrid" aria-live="polite"></section>
 </main>
 
-<footer class="site-footer">
-  <div class="container footer-inner">
-    <div><strong>MHC Diecast</strong> · Bicholim, Goa</div>
-    <div>Free shipping in Goa · Pan-India shipping charges apply</div>
-  </div>
-</footer>
+<div id="siteFooter"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
-<script>
-  // Temporary sample data for the Phase 1 look-and-feel preview.
-  const sample = [
-    { name: "'67 Camaro", brand: 'Hot Wheels', price: 199, mrp: 249, color: '#E4202E' },
-    { name: 'Nissan Skyline GT-R (R34)', brand: 'Hot Wheels', price: 549, mrp: 599, color: '#0A5BD3', tag: 'Premium' },
-    { name: 'Porsche 911 GT3 RS', brand: 'Mini GT', price: 899, mrp: 999, color: '#FFC72C' },
-    { name: 'Bone Shaker', brand: 'Hot Wheels', price: 179, mrp: 199, color: '#15171C', sold: true },
-    { name: 'Land Rover Defender 110', brand: 'Matchbox', price: 199, mrp: 229, color: '#12855A' },
-    { name: 'Twin Mill', brand: 'Hot Wheels', price: 179, mrp: 199, color: '#FF6A13', tag: 'New' }
-  ];
-  const car = c => `data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200' fill='#F2F2EF'/>
-     <rect x='0' y='150' width='200' height='12' fill='#FF7A00'/>
-     <path d='M30 128 L48 104 Q60 92 80 92 L124 92 Q140 92 152 106 L170 118 Q178 122 178 132 L178 138 L22 138 L22 132 Q22 128 30 128Z' fill='${c}'/>
-     <path d='M62 104 L76 96 L118 96 L134 106Z' fill='#cfe3ff' opacity='.9'/>
-     <circle cx='58' cy='140' r='13' fill='#15171C'/><circle cx='58' cy='140' r='5' fill='#ccc'/>
-     <circle cx='146' cy='140' r='13' fill='#15171C'/><circle cx='146' cy='140' r='5' fill='#ccc'/></svg>`)}`;
-
-  const grid = document.getElementById('productGrid');
-  let brand = '', q = '';
-  function render() {
-    const list = sample.filter(p => (!brand || p.brand === brand) &&
-                                    p.name.toLowerCase().includes(q.toLowerCase()));
-    grid.innerHTML = list.length ? list.map(p => `
-      <a class="card" href="#">
-        <div class="card-img">
-          <img src="${car(p.color)}" alt="${p.name}" loading="lazy">
-          ${p.sold ? '<span class="tag sold">Sold out</span>' : p.tag ? `<span class="tag">${p.tag}</span>` : ''}
-        </div>
-        <div class="card-body">
-          <span class="card-brand">${p.brand}</span>
-          <span class="card-title">${p.name}</span>
-          <div class="price-row"><span class="price">₹${p.price}</span><span class="mrp">₹${p.mrp}</span></div>
-        </div>
-      </a>`).join('') : '<p class="empty">No cars match your search.</p>';
-  }
-  document.getElementById('brandChips').addEventListener('click', e => {
-    const b = e.target.closest('.chip'); if (!b) return;
-    document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c === b));
-    brand = b.dataset.brand; render();
-  });
-  document.getElementById('search').addEventListener('input', e => { q = e.target.value; render(); });
-  render();
-</script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/shop.js"></script>
 </body>
 </html>
