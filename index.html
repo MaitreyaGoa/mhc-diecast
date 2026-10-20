@@ -5,9 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MHC Diecast — Hot Wheels & Diecast Cars in Goa</title>
   <meta name="description" content="Buy Hot Wheels and 1:64 diecast cars in Goa. Free shipping across Goa, delivery across India.">
-  <meta name="theme-color" content="#FF6A13">
+  <meta name="theme-color" content="#F5F5F7">
   <meta property="og:title" content="MHC Diecast — Hot Wheels & Diecast Cars in Goa">
+  <meta property="og:image" content="https://www.mhcdiecast.com/assets/img/icon-512.png">
+  <meta property="og:url" content="https://www.mhcdiecast.com/">
   <meta property="og:description" content="Free shipping across Goa · Pan-India delivery · Pay by UPI">
+  <link rel="icon" href="assets/img/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://mmaoniudyamdyfzrxjxt.supabase.co" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="assets/css/theme.css">
 </head>
 <body>
@@ -15,16 +22,28 @@
 
 <main class="container">
   <section class="hero">
-    <h1>Fresh off the <span class="accent">track</span></h1>
-    <p>Hot Wheels mainlines, premiums and 1:64 diecasts — handpicked and shipped from Goa.</p>
-    <div class="badges">
-      <span class="badge goa">🏝️ Free shipping across Goa</span>
-      <span class="badge">🚚 Pan-India delivery</span>
-      <span class="badge">✅ Pay by UPI</span>
+    <div class="hero-copy">
+      <h1>Collector diecast, shipped from Goa.</h1>
+      <p>Hot Wheels, Mini GT and Matchbox in 1:64 — picked one by one, packed like they're ours. Free delivery anywhere in Goa.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#shop">Browse cars</a>
+        <a class="btn btn-ghost" id="heroGroup" target="_blank" rel="noopener" hidden>Join the WhatsApp group</a>
+      </div>
+      <div class="badges">
+        <span class="badge goa">Free shipping across Goa</span>
+        <span class="badge">Delivery across India</span>
+        <span class="badge">Pay by UPI</span>
+      </div>
     </div>
+    <a class="stage intro" id="stage" href="#shop" aria-label="Newest car">
+      <div class="stage-floor-shadow" aria-hidden="true"></div>
+      <div class="stage-reflection" aria-hidden="true"><img id="stageReflect" alt=""></div>
+      <div class="stage-object"><img id="stageImg" data-logo src="assets/img/logo-192.png" alt="MHC Diecast"></div>
+      <div class="stage-caption" id="stageCaption" hidden></div>
+    </a>
   </section>
 
-  <div class="track" aria-hidden="true"></div>
+  <div class="section-head" id="shop"><h2>In the case now</h2></div>
 
   <div class="toolbar">
     <div class="chips" id="brandChips"><button class="chip active" data-brand="">All</button></div>
@@ -45,6 +64,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
+<script src="assets/js/logo.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/shop.js"></script>
 </body>

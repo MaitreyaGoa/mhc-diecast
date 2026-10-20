@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Contact — MHC Diecast</title>
   <meta name="description" content="Contact MHC Diecast in Bicholim, Goa on WhatsApp for orders, new arrivals and requests.">
-  <meta name="theme-color" content="#FF6A13">
-  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#F5F5F7">
   <link rel="icon" href="assets/img/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
@@ -32,10 +31,25 @@
     </div>
   </section>
 
+  <section class="panel community">
+    <img data-logo src="assets/img/logo-192.png" alt="MHC Diecast logo" width="96" height="96">
+    <div>
+      <h2>Join the MHC Diecast WhatsApp group</h2>
+      <p class="muted">Be first to see new arrivals, restocks and special drops.</p>
+      <a class="btn btn-wa-lg" id="groupBtn" target="_blank" rel="noopener">Join the group</a>
+    </div>
+  </section>
+
   <section class="panel">
     <h2>Looking for a specific car?</h2>
     <p>Tell us the model and series — we'll let you know when it comes in.</p>
     <a class="btn btn-ghost" id="requestBtn" target="_blank" rel="noopener" hidden>Request a car</a>
+  </section>
+
+  <section class="panel">
+    <h2>About us</h2>
+    <p>MHC Diecast is a Goa-based diecast store founded by <a id="founderLink" target="_blank" rel="noopener"></a>.
+       Website designed by <a id="designerLink" target="_blank" rel="noopener"></a>.</p>
   </section>
 
   <section class="panel">
@@ -49,8 +63,15 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
+<script src="assets/js/logo.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
+  (function () {
+    const C = MHC.C, g = document.getElementById('groupBtn');
+    if (C.WHATSAPP_GROUP) g.href = C.WHATSAPP_GROUP; else g.closest('section').hidden = true;
+    const f = document.getElementById('founderLink'); f.textContent = C.FOUNDER_NAME; f.href = C.FOUNDER_URL;
+    const d = document.getElementById('designerLink'); d.textContent = C.DESIGNER_NAME; d.href = C.DESIGNER_URL;
+  })();
   MHC.getSettings().then(s => {
     if (!s.whatsapp_number) return;
     const n = s.whatsapp_number.replace(/\D/g, '');

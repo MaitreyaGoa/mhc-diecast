@@ -6,6 +6,11 @@
   <meta name="robots" content="noindex, nofollow">
   <title>Admin — MHC Diecast</title>
   <meta name="theme-color" content="#15171C">
+  <link rel="icon" href="assets/img/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://mmaoniudyamdyfzrxjxt.supabase.co" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="assets/css/theme.css">
   <link rel="stylesheet" href="assets/css/admin.css">
 </head>
@@ -14,7 +19,7 @@
 <!-- ================= LOGIN ================= -->
 <section id="loginView" class="login-wrap" hidden>
   <form id="loginForm" class="panel login-card" novalidate>
-    <div class="logo"><span class="mark">⚡</span><span>MHC <span class="accent">Admin</span></span></div>
+    <div class="logo"><img class="logo-img" data-logo src="assets/img/logo-192.png" alt="MHC Diecast logo" width="52" height="52"><span>MHC <span class="accent">Admin</span></span></div>
     <div class="field"><label for="email">Email</label>
       <input class="input" id="email" type="email" autocomplete="username" required></div>
     <div class="field"><label for="password">Password</label>
@@ -30,7 +35,7 @@
   <header class="a-header">
     <div class="container a-bar">
       <a href="index.html" class="logo" target="_blank" rel="noopener" title="Open shop">
-        <span class="mark">⚡</span><span>MHC <span class="accent">Admin</span></span></a>
+        <img class="logo-img" data-logo src="assets/img/logo-192.png" alt="MHC Diecast logo" width="52" height="52"><span>MHC <span class="accent">Admin</span></span></a>
       <button class="a-logout" id="logoutBtn">Log out</button>
     </div>
     <nav class="container a-tabs" id="tabs">
@@ -159,6 +164,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/config.js"></script>
+<script src="assets/js/logo.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/admin.js"></script>
 </body>
