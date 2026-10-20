@@ -42,6 +42,7 @@
       </div>
       <ul class="specs">
         <li><span>Scale</span>${esc(p.scale || '—')}</li>
+        ${p.category ? `<li><span>Category</span>${esc(p.category === 'Chase' ? 'Treasure Hunt / chase' : p.category)}</li>` : ''}
         <li><span>Availability</span>${sold ? '<b class="bad">Sold out</b>'
             : p.stock === 1 ? '<b class="warn">Only 1 left</b>' : `<b class="ok">In stock (${p.stock})</b>`}</li>
       </ul>
@@ -55,6 +56,7 @@
         <button class="btn btn-primary grow" id="addBtn">Add to cart</button>
       </div>
       <button class="btn btn-dark btn-block" id="buyBtn">Buy now</button>`}
+      ${p.category === 'Pre-owned' ? '<div class="notice">Pre-owned: priced on condition and rarity, not card MRP. Please read the description and check the photos.</div>' : ''}
       ${p.description ? `<div class="desc">${esc(p.description).replace(/\n/g, '<br>')}</div>` : ''}
       <div class="ship-note">
         <div>🏝️ <b>Free shipping</b> anywhere in Goa</div>

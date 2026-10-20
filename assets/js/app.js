@@ -38,8 +38,8 @@
     let h = 0; for (const ch of String(seed || 'x')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     const c = COLORS[h % COLORS.length];
     return 'data:image/svg+xml,' + encodeURIComponent(
-      `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200' fill='#F2F2EF'/>` +
-      `<rect y='150' width='200' height='12' fill='#FF7A00'/>` +
+      `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>` +
+      `<ellipse cx='102' cy='146' rx='78' ry='7' fill='#000' opacity='.18'/>` +
       `<path d='M30 128 L48 104 Q60 92 80 92 L124 92 Q140 92 152 106 L170 118 Q178 122 178 132 L178 138 L22 138 L22 132 Q22 128 30 128Z' fill='${c}'/>` +
       `<path d='M62 104 L76 96 L118 96 L134 106Z' fill='#cfe3ff' opacity='.9'/>` +
       `<circle cx='58' cy='140' r='13' fill='#15171C'/><circle cx='58' cy='140' r='5' fill='#ccc'/>` +
@@ -132,6 +132,10 @@
           <nav class="nav-links">
             ${link('index.html', 'Shop')}
             ${link('track.html', 'Track order', 'hide-sm')}
+            <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch dark mode">
+              <svg class="i-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a.6.6 0 0 0-.8-.7A9.5 9.5 0 1 0 20.9 15.4a.6.6 0 0 0-.7-.8z"/></svg>
+              <svg class="i-sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></g></svg>
+            </button>
             <a href="cart.html" class="cart-btn ${page === 'cart.html' ? 'active' : ''}" aria-label="Cart">🛒
               <span class="cart-count" id="cartCount" hidden>0</span></a>
           </nav>
@@ -152,7 +156,14 @@
           </div>
           <div class="footer-col">
             <h4>Shop</h4>
+            <a href="index.html?c=hot-wheels">Hot Wheels</a>
+            <a href="index.html?c=mini-gt">Mini GT</a>
+            <a href="index.html?c=pre-owned">Pre-owned</a>
+            <a href="index.html?c=accessories">Accessories</a>
             <a href="index.html">All cars</a>
+          </div>
+          <div class="footer-col">
+            <h4>Help</h4>
             <a href="track.html">Track order</a>
             <a href="shipping.html">Shipping & returns</a>
             <a href="contact.html">Contact</a>
@@ -242,7 +253,54 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => { renderChrome(); fillLogos(); enableTilt(); });
+  // ---------- light / dark theme ----------
+  const THEME_KEY = 'mhc-theme';
+  function currentTheme() { return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'; }
+  function applyTheme(t, save) {
+    document.documentElement.dataset.theme = t;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', t === 'dark' ? '#0B0C10' : '#F5F5F7');
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.setAttribute('aria-label', t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    if (save) { try { localStorage.setItem(THEME_KEY, t); } catch (e) {} }
+  }
+  function initTheme() {
+    if (document.body.classList.contains('admin')) return;   // admin keeps its own look
+    let saved = null; try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    applyTheme(saved || (mq.matches ? 'dark' : 'light'), false);
+    if (!saved && mq.addEventListener) mq.addEventListener('change', e => {
+      let s = null; try { s = localStorage.getItem(THEME_KEY); } catch (_) {}
+      if (!s) applyTheme(e.matches ? 'dark' : 'light', false);
+    });
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#themeToggle')) return;
+      document.documentElement.classList.add('theme-anim');
+      applyTheme(currentTheme() === 'dark' ? 'light' : 'dark', true);
+      setTimeout(() => document.documentElement.classList.remove('theme-anim'), 500);
+    });
+  }
+
+  // ---------- floating background scene ----------
+  function addScene() {
+    if (document.body.classList.contains('admin') || document.querySelector('.bg-scene')) return;
+    const s = document.createElement('div');
+    s.className = 'bg-scene'; s.setAttribute('aria-hidden', 'true');
+    s.innerHTML = '<div class="bg-layer"><span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span><span class="orb o4"></span></div>' +
+                  '<div class="bg-floor"></div><div class="bg-grain"></div>';
+    document.body.prepend(s);
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const layer = s.querySelector('.bg-layer');
+    let raf = 0, tx = 0, ty = 0;
+    window.addEventListener('pointermove', e => {
+      tx = (e.clientX / innerWidth - 0.5) * -28; ty = (e.clientY / innerHeight - 0.5) * -20;
+      if (!raf) raf = requestAnimationFrame(() => { layer.style.transform = `translate3d(${tx}px, ${ty}px, 0)`; raf = 0; });
+    }, { passive: true });
+  }
+
+  initTheme();
+  document.addEventListener('DOMContentLoaded', () => { addScene(); renderChrome(); fillLogos(); enableTilt(); applyTheme(currentTheme(), false); });
 
   window.MHC = { C, sb, store, money, esc, param, isGoa, placeholder, cover, Cart,
                  getSettings, shippingFor, waLink, toast, errMsg, updateCartCount };

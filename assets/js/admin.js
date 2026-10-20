@@ -251,24 +251,44 @@
     if (error) { $('productList').innerHTML = `<p class="empty">${esc(errText(error))}</p>`; return; }
     state.products = data || [];
     const uniq = k => [...new Set(state.products.map(p => p[k]).filter(Boolean))].sort();
-    $('brandList').innerHTML = [...new Set(['Hot Wheels', 'Matchbox', 'Mini GT', 'Majorette', 'Tarmac Works', ...uniq('brand')])]
+    $('brandList').innerHTML = [...new Set([...CAT.BRANDS, ...uniq('brand')])]
       .map(b => `<option value="${esc(b)}">`).join('');
-    $('seriesList').innerHTML = uniq('series').map(b => `<option value="${esc(b)}">`).join('');
+    fillSeries();
     renderProducts();
   }
+
+  // ---------- catalogue suggestions (assets/js/catalog.js) ----------
+  const CAT = window.MHC_CATALOG || { CATEGORIES: ['Mainline', 'Premium', 'Chase', 'Pre-owned', 'Accessory'],
+                                       BRANDS: [], SERIES: {}, SCALES: ['1:64'], guessCategory: () => '' };
+  $('p_category').innerHTML = '<option value="">Choose…</option>' +
+    CAT.CATEGORIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  $('scaleList').innerHTML = CAT.SCALES.map(s => `<option value="${esc(s)}">`).join('');
+  function fillSeries() {
+    const brand = $('p_brand').value.trim();
+    const used = state.products.filter(p => p.brand === brand).map(p => p.series).filter(Boolean);
+    const list = [...new Set([...(CAT.SERIES[brand] || []), ...used, ...(CAT.SERIES['*'] || [])])];
+    $('seriesList').innerHTML = list.map(s => `<option value="${esc(s)}">`).join('');
+  }
+  $('p_brand').addEventListener('input', fillSeries);
+  $('p_series').addEventListener('change', () => {
+    if ($('p_category').value) return;           // never overwrite a choice
+    const g = CAT.guessCategory($('p_series').value);
+    if (g) $('p_category').value = g;
+  });
 
   function renderProducts() {
     const term = $('productSearch').value.trim().toLowerCase();
     const ps = state.products;
     const live = ps.filter(p => p.is_active && p.stock > 0).length;
     $('productStats').textContent = `${ps.length} cars · ${live} on sale · ${ps.filter(p => p.stock <= 0).length} sold out · ${ps.filter(p => !p.is_active).length} hidden`;
-    const list = ps.filter(p => !term || [p.name, p.brand, p.series].join(' ').toLowerCase().includes(term));
+    const list = ps.filter(p => !term || [p.name, p.brand, p.series, p.category].join(' ').toLowerCase().includes(term));
     $('productList').innerHTML = list.length ? list.map(p => `
       <div class="a-prod${p.is_active ? '' : ' hidden-prod'}" data-id="${esc(p.id)}">
         <img src="${esc((p.images && p.images[0]) || placeholder(p.id))}" alt="" loading="lazy">
         <div class="a-prod-info">
           <span class="card-brand">${esc(p.brand)}${p.series ? ' · ' + esc(p.series) : ''}</span>
           <b>${esc(p.name)}</b>
+          ${p.category ? `<span class="pill cat">${esc(p.category)}</span>` : '<span class="pill bad">No category</span>'}
           <span class="small">${money(p.price)} <span class="muted">MRP ${money(p.mrp)}</span>
             ${p.is_active ? '' : '<span class="pill">Hidden</span>'}${p.stock <= 0 ? '<span class="pill bad">Sold out</span>' : ''}</span>
         </div>
@@ -309,6 +329,8 @@
     $('p_price').value = p ? p.price : '';
     $('p_stock').value = p ? p.stock : 1;
     $('p_scale').value = p ? (p.scale || '1:64') : '1:64';
+    $('p_category').value = p ? (p.category || '') : '';
+    fillSeries();
     $('p_active').checked = p ? p.is_active : true;
     $('p_description').value = p ? (p.description || '') : '';
     $('deleteProduct').hidden = !p;
@@ -386,6 +408,7 @@
       brand: $('p_brand').value.trim() || 'Hot Wheels',
       series: $('p_series').value.trim() || null,
       scale: $('p_scale').value.trim() || '1:64',
+      category: $('p_category').value || null,
       mrp: Number($('p_mrp').value),
       price: Number($('p_price').value),
       stock: parseInt($('p_stock').value, 10),
@@ -395,6 +418,7 @@
       updated_at: new Date().toISOString()
     };
     if (!row.name) return show('Enter the car name.', 'p_name');
+    if (!row.category) return show('Choose a category.', 'p_category');
     if (!(row.mrp >= 0) || $('p_mrp').value === '') return show('Enter the MRP.', 'p_mrp');
     if (!(row.price >= 0) || $('p_price').value === '') return show('Enter the selling price.', 'p_price');
     if (!(row.stock >= 0)) return show('Stock must be 0 or more.', 'p_stock');
@@ -405,6 +429,7 @@
     const q = state.edit._new ? sb.from('products').insert(row) : sb.from('products').update(row).eq('id', row.id);
     const { error } = await q;
     btn.disabled = false; btn.textContent = 'Save';
+    if (error && /category/i.test(error.message || '')) return show('Run supabase/phase6-categories.sql in Supabase first, then save again.');
     if (error) return show(errText(error));
     state.edit._saved = true;
     removeFiles(state.removedImages);
