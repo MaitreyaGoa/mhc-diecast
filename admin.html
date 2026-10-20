@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Admin — MHC Diecast</title>
+  <meta name="theme-color" content="#15171C">
+  <link rel="stylesheet" href="assets/css/theme.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body class="admin">
+
+<!-- ================= LOGIN ================= -->
+<section id="loginView" class="login-wrap" hidden>
+  <form id="loginForm" class="panel login-card" novalidate>
+    <div class="logo"><span class="mark">⚡</span><span>MHC <span class="accent">Admin</span></span></div>
+    <div class="field"><label for="email">Email</label>
+      <input class="input" id="email" type="email" autocomplete="username" required></div>
+    <div class="field"><label for="password">Password</label>
+      <input class="input" id="password" type="password" autocomplete="current-password" required></div>
+    <p class="form-error" id="loginError" hidden></p>
+    <button class="btn btn-primary btn-block" id="loginBtn" type="submit">Log in</button>
+    <a href="index.html" class="link-btn back-link">← Back to shop</a>
+  </form>
+</section>
+
+<!-- ================= APP ================= -->
+<div id="appView" hidden>
+  <header class="a-header">
+    <div class="container a-bar">
+      <a href="index.html" class="logo" target="_blank" rel="noopener" title="Open shop">
+        <span class="mark">⚡</span><span>MHC <span class="accent">Admin</span></span></a>
+      <button class="a-logout" id="logoutBtn">Log out</button>
+    </div>
+    <nav class="container a-tabs" id="tabs">
+      <button class="a-tab active" data-tab="orders">Orders <span class="a-badge" id="pendingBadge" hidden>0</span></button>
+      <button class="a-tab" data-tab="products">Cars</button>
+      <button class="a-tab" data-tab="settings">Settings</button>
+    </nav>
+  </header>
+
+  <main class="container a-main">
+    <!-- ORDERS -->
+    <section id="tab-orders" class="a-section">
+      <div class="a-toolbar">
+        <div class="chips" id="statusChips"></div>
+        <div class="a-toolbar-row">
+          <input class="search" id="orderSearch" type="search" placeholder="Search code, name, phone…">
+          <button class="btn btn-ghost" id="refreshOrders" title="Refresh">↻</button>
+        </div>
+      </div>
+      <div id="orderList" class="a-list"></div>
+    </section>
+
+    <!-- PRODUCTS -->
+    <section id="tab-products" class="a-section" hidden>
+      <div class="a-toolbar-row">
+        <input class="search" id="productSearch" type="search" placeholder="Search cars…">
+        <button class="btn btn-primary" id="addProduct">+ Add car</button>
+      </div>
+      <div class="a-sub muted small" id="productStats"></div>
+      <div id="productList" class="a-list"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tab-settings" class="a-section" hidden>
+      <form id="settingsForm" class="panel" novalidate>
+        <h2 class="panel-title">Store & payment</h2>
+        <div class="two">
+          <div class="field"><label for="s_store_name">Store name</label><input class="input" id="s_store_name"></div>
+          <div class="field"><label for="s_whatsapp_number">WhatsApp number</label>
+            <input class="input" id="s_whatsapp_number" inputmode="numeric" placeholder="91XXXXXXXXXX"></div>
+        </div>
+        <div class="two">
+          <div class="field"><label for="s_upi_id">UPI ID</label><input class="input" id="s_upi_id" placeholder="name@okicici" autocapitalize="off"></div>
+          <div class="field"><label for="s_payee_name">Payee name (as in bank)</label><input class="input" id="s_payee_name"></div>
+        </div>
+        <div class="field"><label for="s_outside_goa_shipping">Shipping charge outside Goa (₹)</label>
+          <input class="input" id="s_outside_goa_shipping" type="number" min="0" step="1" inputmode="numeric"></div>
+
+        <div class="field">
+          <label>Backup QR image (optional)</label>
+          <p class="muted small">Checkout makes a QR with the exact amount from your UPI ID automatically. This image is only shown if that fails or no UPI ID is set.</p>
+          <div class="qr-row">
+            <img id="qrPreview" class="qr-preview" alt="" hidden>
+            <label class="btn btn-ghost">Upload QR<input type="file" id="qrFile" accept="image/*" hidden></label>
+            <button type="button" class="link-btn" id="qrRemove" hidden>Remove</button>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="saveSettings" type="submit">Save settings</button>
+      </form>
+
+      <form id="passwordForm" class="panel" novalidate>
+        <h2 class="panel-title">Change password</h2>
+        <div class="two">
+          <div class="field"><label for="newPass">New password</label><input class="input" id="newPass" type="password" autocomplete="new-password" minlength="8"></div>
+          <div class="field"><label for="newPass2">Repeat password</label><input class="input" id="newPass2" type="password" autocomplete="new-password"></div>
+        </div>
+        <button class="btn btn-dark" type="submit">Update password</button>
+      </form>
+    </section>
+  </main>
+</div>
+
+<!-- ================= DIALOGS ================= -->
+<dialog id="imgDialog" class="a-dialog img-dialog">
+  <img id="imgFull" alt="Payment screenshot">
+  <div class="dialog-actions">
+    <a class="btn btn-ghost" id="imgOpen" target="_blank" rel="noopener">Open full size</a>
+    <button class="btn btn-dark" data-close>Close</button>
+  </div>
+</dialog>
+
+<dialog id="productDialog" class="a-dialog">
+  <form id="productForm" method="dialog" novalidate>
+    <h2 class="panel-title" id="productDialogTitle">Add car</h2>
+
+    <div class="field">
+      <label>Photos <span class="muted small">(first photo is the cover)</span></label>
+      <div class="photo-grid" id="photoGrid"></div>
+      <label class="upload small-upload" id="photoDrop">
+        <input type="file" id="photoFiles" accept="image/*" multiple>
+        <span>📷 Add photos (camera or gallery)</span>
+      </label>
+    </div>
+
+    <div class="field"><label for="p_name">Car name *</label><input class="input" id="p_name" placeholder="'67 Camaro" required></div>
+    <div class="two">
+      <div class="field"><label for="p_brand">Brand *</label><input class="input" id="p_brand" list="brandList" value="Hot Wheels" required>
+        <datalist id="brandList"></datalist></div>
+      <div class="field"><label for="p_series">Series</label><input class="input" id="p_series" list="seriesList" placeholder="Car Culture, Mainline…">
+        <datalist id="seriesList"></datalist></div>
+    </div>
+    <div class="three">
+      <div class="field"><label for="p_mrp">MRP (₹) *</label><input class="input" id="p_mrp" type="number" min="0" step="1" inputmode="numeric" required></div>
+      <div class="field"><label for="p_price">Selling price (₹) *</label><input class="input" id="p_price" type="number" min="0" step="1" inputmode="numeric" required></div>
+      <div class="field"><label for="p_stock">Stock *</label><input class="input" id="p_stock" type="number" min="0" step="1" inputmode="numeric" value="1" required></div>
+    </div>
+    <div class="two">
+      <div class="field"><label for="p_scale">Scale</label><input class="input" id="p_scale" value="1:64" list="scaleList">
+        <datalist id="scaleList"><option value="1:64"><option value="1:43"><option value="1:24"><option value="1:18"></datalist></div>
+      <div class="field toggle-field">
+        <label class="toggle"><input type="checkbox" id="p_active" checked><span></span> Visible in shop</label>
+      </div>
+    </div>
+    <div class="field"><label for="p_description">Description</label>
+      <textarea class="input" id="p_description" rows="3" placeholder="Condition, card condition, special notes…"></textarea></div>
+
+    <p class="form-error" id="productError" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="link-btn danger" id="deleteProduct" hidden>Delete car</button>
+      <span class="grow"></span>
+      <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+      <button type="submit" class="btn btn-primary" id="saveProduct">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/admin.js"></script>
+</body>
+</html>
