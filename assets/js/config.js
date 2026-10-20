@@ -19,10 +19,11 @@ window.MHC_CONFIG = {
   STORE_LOCATION: 'Bicholim, Goa',
   CONTACT_PHONE:  '7358425108',
   WHATSAPP_GROUP: 'https://chat.whatsapp.com/EPPQ0rsOrZoKdSJHfGtSmP',
+  FACEBOOK_PAGE:  'https://www.facebook.com/MHCDiecast',
   FOUNDER_NAME:   'Maitreya Hinde',
   FOUNDER_URL:    'https://www.facebook.com/MaitreyaHinde/',
   DESIGNER_NAME:  'MHC Digital',
-  DESIGNER_URL:   'https://www.facebook.com/MHCdigital',
+  DESIGNER_URL:   'https://www.facebook.com/MHCdigital/',
   CURRENCY:   '₹',
   GOA_PINCODE_PREFIX: '403'      // free shipping for these pincodes
 };

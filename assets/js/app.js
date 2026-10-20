@@ -117,6 +117,9 @@
   const LOGO = window.MHC_LOGO || 'assets/img/logo-192.png';
   function fillLogos() { document.querySelectorAll('img[data-logo]:not(.photo)').forEach(i => { i.src = LOGO; }); }
 
+  // Small Facebook mark used in footer links
+  const FB = '<svg class="fb-ico" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z"/></svg>';
+
   // ---------- header / footer ----------
   function renderChrome() {
     const page = location.pathname.split('/').pop() || 'index.html';
@@ -178,11 +181,12 @@
             <h4>Community</h4>
             ${C.WHATSAPP_GROUP ? `<a class="footer-group" href="${esc(C.WHATSAPP_GROUP)}" target="_blank" rel="noopener">Join the WhatsApp group</a>
             <span class="footer-note">New arrivals & drops first</span>` : ''}
+            ${C.FACEBOOK_PAGE ? `<a class="fb-link" href="${esc(C.FACEBOOK_PAGE)}" target="_blank" rel="noopener">${FB}Follow MHC Diecast on Facebook</a>` : ''}
           </div>
         </div>
         <div class="container footer-credits">
-          <span>Founder: ${C.FOUNDER_URL ? `<a href="${esc(C.FOUNDER_URL)}" target="_blank" rel="noopener">${esc(C.FOUNDER_NAME)}</a>` : esc(C.FOUNDER_NAME || '')}</span>
-          <span>Website designed by ${C.DESIGNER_URL ? `<a href="${esc(C.DESIGNER_URL)}" target="_blank" rel="noopener">${esc(C.DESIGNER_NAME)}</a>` : esc(C.DESIGNER_NAME || '')}</span>
+          <span>Founder: ${C.FOUNDER_URL ? `<a class="fb-inline" href="${esc(C.FOUNDER_URL)}" target="_blank" rel="noopener" title="Maitreya Hinde on Facebook">${FB}${esc(C.FOUNDER_NAME)}</a>` : esc(C.FOUNDER_NAME || '')}</span>
+          <span>Developed by ${C.DESIGNER_URL ? `<a class="fb-inline" href="${esc(C.DESIGNER_URL)}" target="_blank" rel="noopener" title="MHC Digital on Facebook">${FB}${esc(C.DESIGNER_NAME)}</a>` : esc(C.DESIGNER_NAME || '')}</span>
         </div>
         <div class="container footer-legal">© ${new Date().getFullYear()} ${esc(C.STORE_NAME)}, ${esc(C.STORE_LOCATION || 'Goa')}. Hot Wheels and other brand names are trademarks of their owners; we are an independent seller.</div>
       </footer>`;
