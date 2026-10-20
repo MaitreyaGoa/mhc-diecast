@@ -43,13 +43,16 @@
     </a>
   </section>
 
-  <div class="section-head" id="shop"><h2>In the case now</h2></div>
+  <div class="section-head" id="shop"><h2 id="shopHeading">In the case now</h2></div>
 
+  <nav class="chips menu-chips" id="brandChips" aria-label="Shop by brand"></nav>
   <div class="toolbar">
-    <div class="chips" id="brandChips"><button class="chip active" data-brand="">All</button></div>
+    <div class="chips sub-chips" id="typeChips" hidden></div>
     <label class="sr-only" for="search">Search cars</label>
     <input class="search" id="search" type="search" placeholder="Search cars…">
     <label class="sr-only" for="sort">Sort</label>
+    <label class="sr-only" for="scale">Scale</label>
+    <select class="search sort" id="scale" hidden></select>
     <select class="search sort" id="sort">
       <option value="new">Newest</option>
       <option value="low">Price: low to high</option>
@@ -66,6 +69,7 @@
 <script src="assets/js/config.js"></script>
 <script src="assets/js/logo.js"></script>
 <script src="assets/js/app.js"></script>
+<script src="assets/js/catalog.js"></script>
 <script src="assets/js/shop.js"></script>
 </body>
 </html>

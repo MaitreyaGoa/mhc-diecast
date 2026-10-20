@@ -143,8 +143,14 @@
       <div class="field"><label for="p_stock">Stock *</label><input class="input" id="p_stock" type="number" min="0" step="1" inputmode="numeric" value="1" required></div>
     </div>
     <div class="two">
+      <div class="field"><label for="p_category">Category *</label>
+        <select class="input" id="p_category" required>
+          <option value="">Choose…</option>
+        </select></div>
       <div class="field"><label for="p_scale">Scale</label><input class="input" id="p_scale" value="1:64" list="scaleList">
-        <datalist id="scaleList"><option value="1:64"><option value="1:43"><option value="1:24"><option value="1:18"></datalist></div>
+        <datalist id="scaleList"></datalist></div>
+    </div>
+    <div class="two">
       <div class="field toggle-field">
         <label class="toggle"><input type="checkbox" id="p_active" checked><span></span> Visible in shop</label>
       </div>
@@ -166,6 +172,7 @@
 <script src="assets/js/config.js"></script>
 <script src="assets/js/logo.js"></script>
 <script src="assets/js/app.js"></script>
+<script src="assets/js/catalog.js"></script>
 <script src="assets/js/admin.js"></script>
 </body>
 </html>
