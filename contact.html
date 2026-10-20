@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact — MHC Diecast</title>
+  <meta name="description" content="Contact MHC Diecast in Bicholim, Goa on WhatsApp for orders, new arrivals and requests.">
+  <meta name="theme-color" content="#FF6A13">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/img/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://mmaoniudyamdyfzrxjxt.supabase.co" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div id="siteHeader"></div>
+
+<main class="container narrow info">
+  <h1 class="page-title">Contact us</h1>
+
+  <section class="panel contact-hero">
+    <div class="ico big">💬</div>
+    <h2>WhatsApp is the fastest way to reach us</h2>
+    <p class="muted">Order questions, new arrivals, or looking for a specific car? Send us a message.</p>
+    <a class="btn btn-wa-lg" id="waBtn" target="_blank" rel="noopener" hidden>Chat on WhatsApp</a>
+    <div class="contact-lines">
+      <div id="phoneLine" hidden>📞 <a id="phoneLink"></a></div>
+      <div>📍 Bicholim, Goa</div>
+      <div>🕘 Replies 10 am – 8 pm, every day</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Looking for a specific car?</h2>
+    <p>Tell us the model and series — we'll let you know when it comes in.</p>
+    <a class="btn btn-ghost" id="requestBtn" target="_blank" rel="noopener" hidden>Request a car</a>
+  </section>
+
+  <section class="panel">
+    <h2>Already ordered?</h2>
+    <p>Check your order status anytime with your order code and mobile number.</p>
+    <a class="btn btn-primary" href="track.html">Track your order</a>
+  </section>
+</main>
+
+<div id="siteFooter"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  MHC.getSettings().then(s => {
+    if (!s.whatsapp_number) return;
+    const n = s.whatsapp_number.replace(/\D/g, '');
+    const wa = document.getElementById('waBtn');
+    wa.href = MHC.waLink(n, 'Hi MHC Diecast! ');
+    wa.hidden = false;
+    const req = document.getElementById('requestBtn');
+    req.href = MHC.waLink(n, 'Hi! I am looking for this car: ');
+    req.hidden = false;
+    const local = n.length === 12 && n.startsWith('91') ? n.slice(2) : n;
+    const pl = document.getElementById('phoneLink');
+    pl.href = 'tel:+' + n; pl.textContent = '+91 ' + local.replace(/(\d{5})(\d{5})/, '$1 $2');
+    document.getElementById('phoneLine').hidden = false;
+  }).catch(() => {});
+</script>
+</body>
+</html>

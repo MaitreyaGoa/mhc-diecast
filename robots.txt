@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /admin.html
+Disallow: /status.html
+Disallow: /checkout.html
+Disallow: /mhc-diecast/admin.html
+Disallow: /mhc-diecast/status.html
+Disallow: /mhc-diecast/checkout.html
