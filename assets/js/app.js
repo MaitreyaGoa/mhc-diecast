@@ -102,6 +102,9 @@
     if (settingsCache) return settingsCache;
     const { data, error } = await sb.from('settings').select('*').eq('id', 1).single();
     if (error) throw error;
+    // WhatsApp links need the country code: 7358425108 → 917358425108
+    const wa = String(data.whatsapp_number || '').replace(/\D/g, '');
+    data.whatsapp_number = wa.length === 10 ? '91' + wa : (wa || null);
     settingsCache = data;
     return data;
   }
@@ -134,11 +137,35 @@
     if (footer) footer.innerHTML = `
       <footer class="site-footer">
         <div class="container footer-inner">
-          <div><strong>${esc(C.STORE_NAME)}</strong> · Bicholim, Goa</div>
-          <div><a href="track.html">Track your order</a> · Free shipping in Goa · Pan-India shipping charges apply</div>
+          <div class="footer-brand">
+            <strong>${esc(C.STORE_NAME)}</strong> · Bicholim, Goa
+            <div class="footer-note">Free shipping across Goa · Pan-India delivery · Pay by UPI</div>
+          </div>
+          <nav class="footer-links">
+            <a href="index.html">Shop</a>
+            <a href="track.html">Track order</a>
+            <a href="shipping.html">Shipping & returns</a>
+            <a href="contact.html">Contact</a>
+          </nav>
         </div>
+        <div class="container footer-legal">© ${new Date().getFullYear()} ${esc(C.STORE_NAME)}. Hot Wheels and other brand names are trademarks of their owners; we are an independent seller.</div>
       </footer>`;
     updateCartCount();
+    if (page !== 'checkout.html' && page !== 'admin.html') addWhatsAppButton();
+  }
+
+  // Floating WhatsApp chat button (uses the number saved in Settings)
+  async function addWhatsAppButton() {
+    try {
+      const s = await getSettings();
+      if (!s.whatsapp_number || document.getElementById('waFloat')) return;
+      const a = document.createElement('a');
+      a.id = 'waFloat'; a.className = 'wa-float'; a.target = '_blank'; a.rel = 'noopener';
+      a.href = waLink(s.whatsapp_number, 'Hi MHC Diecast! ');
+      a.setAttribute('aria-label', 'Chat on WhatsApp');
+      a.innerHTML = '<svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path fill="#fff" d="M16 3C9 3 3.3 8.6 3.3 15.6c0 2.5.7 4.8 2 6.8L3 29l6.8-2.2c1.9 1 4 1.6 6.2 1.6 7 0 12.7-5.7 12.7-12.7S23 3 16 3zm0 23.1c-2 0-3.9-.6-5.6-1.6l-.4-.2-4 1.3 1.3-3.9-.3-.4c-1.1-1.7-1.7-3.7-1.7-5.7C5.3 9.8 10.1 5 16 5s10.7 4.8 10.7 10.7S21.9 26.1 16 26.1zm5.9-8c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.4 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.1-1.2 2.8s1.2 3.2 1.4 3.4c.2.2 2.4 3.6 5.7 5.1.8.3 1.4.5 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5.3-.7.3-1.4.2-1.5-.1-.1-.3-.2-.6-.4z"/></svg>';
+      document.body.appendChild(a);
+    } catch (e) { /* no button if settings can't load */ }
   }
   function updateCartCount() {
     const el = document.getElementById('cartCount');

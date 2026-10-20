@@ -17,7 +17,8 @@
     box.innerHTML = '<p class="empty">This car is no longer listed. <a href="index.html">See other cars</a></p>'; return;
   }
 
-  document.title = `${p.name} — MHC Diecast`;
+  document.title = `${p.name} — ${p.brand} ${p.scale || ''} | MHC Diecast`;
+  setSeo(p);
   const imgs = p.images && p.images.length ? p.images : [cover(p)];
   const sold = p.stock <= 0;
   const off = p.mrp > p.price ? Math.round((1 - p.price / p.mrp) * 100) : 0;
@@ -59,7 +60,14 @@
         <div>🚚 Pan-India delivery — shipping charges added at checkout</div>
         <div>✅ Pay by UPI — your order is confirmed once we verify the payment</div>
       </div>
+      <button class="link-btn share-btn" id="shareBtn" type="button">↗ Share this car</button>
     </div>`;
+
+  document.getElementById('shareBtn').onclick = async () => {
+    const text = `${p.name} (${p.brand}) — ${money(p.price)} at MHC Diecast`;
+    if (navigator.share) { try { await navigator.share({ title: p.name, text, url: location.href }); } catch (e) {} }
+    else window.open(`https://wa.me/?text=${encodeURIComponent(text + '\n' + location.href)}`, '_blank');
+  };
 
   box.querySelectorAll('.thumb').forEach(t => t.addEventListener('click', () => {
     document.getElementById('mainImg').src = t.dataset.src;
@@ -83,4 +91,30 @@
   }
   document.getElementById('addBtn').onclick = () => { if (add()) toast('Added to cart 🏁', 'ok'); };
   document.getElementById('buyBtn').onclick = () => { if (add() || inCart()) location.href = 'cart.html'; };
+
+  // ---------- SEO: description, social preview, Google product data ----------
+  function setSeo(p) {
+    const desc = `${p.brand} ${p.name}${p.series ? ' (' + p.series + ')' : ''}, ${p.scale || '1:64'} diecast — ${money(p.price)}. ` +
+                 'Free shipping in Goa, delivery across India.';
+    const meta = (attr, key, val) => {
+      let m = document.querySelector(`meta[${attr}="${key}"]`);
+      if (!m) { m = document.createElement('meta'); m.setAttribute(attr, key); document.head.appendChild(m); }
+      m.setAttribute('content', val);
+    };
+    meta('name', 'description', desc);
+    meta('property', 'og:title', `${p.name} — ${money(p.price)}`);
+    meta('property', 'og:description', desc);
+    if (p.images && p.images[0]) meta('property', 'og:image', p.images[0]);
+    const ld = document.createElement('script');
+    ld.type = 'application/ld+json';
+    ld.textContent = JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'Product',
+      name: p.name, brand: { '@type': 'Brand', name: p.brand },
+      image: p.images || [], description: p.description || desc, sku: p.id,
+      offers: { '@type': 'Offer', priceCurrency: 'INR', price: Number(p.price), url: location.href,
+                availability: p.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/SoldOut',
+                itemCondition: 'https://schema.org/NewCondition' }
+    });
+    document.head.appendChild(ld);
+  }
 })();

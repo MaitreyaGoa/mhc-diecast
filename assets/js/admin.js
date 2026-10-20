@@ -78,7 +78,8 @@
       const [cnt, res] = await Promise.all([
         sb.from('orders').select('status').limit(5000),
         (() => {
-          let q = sb.from('orders').select('*').order('created_at', { ascending: false }).limit(150);
+          // Pending: oldest first so nothing waits too long. Others: newest first.
+          let q = sb.from('orders').select('*').order('created_at', { ascending: state.status === 'pending' }).limit(150);
           if (state.status !== 'all') q = q.eq('status', state.status);
           return q;
         })()
@@ -101,7 +102,10 @@
     const p = state.counts.pending || 0;
     $('pendingBadge').textContent = p; $('pendingBadge').hidden = !p;
     document.title = (p ? `(${p}) ` : '') + 'Admin — MHC Diecast';
-    if (state.lastPending !== null && p > state.lastPending) toast(`🔔 ${p - state.lastPending} new order(s) to verify`, 'ok');
+    if (state.lastPending !== null && p > state.lastPending) {
+      toast(`🔔 ${p - state.lastPending} new order(s) to verify`, 'ok');
+      try { if (navigator.vibrate) navigator.vibrate([120, 80, 120]); } catch (e) {}
+    }
     state.lastPending = p;
   }
 
@@ -141,8 +145,11 @@
       delivered: '', rejected: `<button class="btn btn-ghost" data-act="pending">↺ Back to pending</button>`,
       cancelled: `<button class="btn btn-ghost" data-act="pending">↺ Back to pending</button>`
     }[o.status] || '';
+    const hours = Math.floor((Date.now() - new Date(o.created_at)) / 36e5);
+    const overdue = o.status === 'pending' && hours >= 24;
     return `
-      <article class="a-order" data-id="${esc(o.id)}">
+      <article class="a-order${overdue ? ' overdue' : ''}" data-id="${esc(o.id)}">
+        ${overdue ? `<div class="overdue-bar">⏰ Waiting ${hours >= 48 ? Math.floor(hours / 24) + ' days' : hours + ' hours'} — please verify</div>` : ''}
         <header class="a-order-head">
           <div><b class="mono">${esc(o.order_code)}</b> <span class="status ${esc(o.status)}">${esc(o.status)}</span></div>
           <span class="muted small">${date}</span>

@@ -31,7 +31,8 @@
     const sold = p.stock <= 0;
     const off = p.mrp > p.price ? Math.round((1 - p.price / p.mrp) * 100) : 0;
     const tag = sold ? '<span class="tag sold">Sold out</span>'
-              : p.stock === 1 ? '<span class="tag">Last one</span>' : '';
+              : p.stock === 1 ? '<span class="tag">Last one</span>'
+              : (Date.now() - new Date(p.created_at)) < 7 * 864e5 ? '<span class="tag new">New</span>' : '';
     return `
       <a class="card${sold ? ' is-sold' : ''}" href="product.html?id=${encodeURIComponent(p.id)}">
         <div class="card-img">
