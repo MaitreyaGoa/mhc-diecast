@@ -616,3 +616,12 @@ body { background-attachment: scroll; }
   .bg-floor { background-size: 48px 48px; }
 }
 @media (prefers-reduced-motion: reduce) { .orb, .bg-floor { animation: none !important; } }
+
+/* ---------- Facebook links ---------- */
+.fb-ico { flex: none; color: #1877F2; }
+.fb-link { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; margin-top: 4px; }
+.fb-link .fb-ico { width: 16px; height: 16px; }
+.fb-inline { display: inline-flex; align-items: center; gap: 5px; vertical-align: -2px; }
+.btn-fb { background: linear-gradient(180deg, #2D88FF, #1877F2); color: #fff; box-shadow: 0 8px 20px -10px rgba(24,119,242,.6); }
+.btn-fb:hover { filter: brightness(1.06); }
+:root[data-theme="dark"] .fb-ico { color: #4C9BFF; }
