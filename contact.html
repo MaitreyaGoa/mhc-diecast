@@ -42,6 +42,12 @@
   </section>
 
   <section class="panel">
+    <h2>Follow us on Facebook</h2>
+    <p>New arrivals, restocks and collector photos.</p>
+    <a class="btn btn-fb" id="fbBtn" target="_blank" rel="noopener" hidden>MHC Diecast on Facebook</a>
+  </section>
+
+  <section class="panel">
     <h2>Looking for a specific car?</h2>
     <p>Tell us the model and series — we'll let you know when it comes in.</p>
     <a class="btn btn-ghost" id="requestBtn" target="_blank" rel="noopener" hidden>Request a car</a>
@@ -50,7 +56,7 @@
   <section class="panel">
     <h2>About us</h2>
     <p>MHC Diecast is a Goa-based diecast store founded by <a id="founderLink" target="_blank" rel="noopener"></a>.
-       Website designed by <a id="designerLink" target="_blank" rel="noopener"></a>.</p>
+       Website developed by <a id="designerLink" target="_blank" rel="noopener"></a>.</p>
   </section>
 
   <section class="panel">
@@ -72,6 +78,7 @@
     if (C.WHATSAPP_GROUP) g.href = C.WHATSAPP_GROUP; else g.closest('section').hidden = true;
     const f = document.getElementById('founderLink'); f.textContent = C.FOUNDER_NAME; f.href = C.FOUNDER_URL;
     const d = document.getElementById('designerLink'); d.textContent = C.DESIGNER_NAME; d.href = C.DESIGNER_URL;
+    const fb = document.getElementById('fbBtn'); if (C.FACEBOOK_PAGE) { fb.href = C.FACEBOOK_PAGE; fb.hidden = false; } else fb.closest('section').hidden = true;
   })();
   MHC.getSettings().then(s => {
     if (!s.whatsapp_number) return;
