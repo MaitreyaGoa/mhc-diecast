@@ -36,12 +36,14 @@
     <div class="container a-bar">
       <a href="index.html" class="logo" target="_blank" rel="noopener" title="Open shop">
         <img class="logo-img" data-logo src="assets/img/logo-192.png" alt="MHC Diecast logo" width="52" height="52"><span>MHC <span class="accent">Admin</span></span></a>
-      <button class="a-logout" id="logoutBtn">Log out</button>
+      <div class="a-who"><span class="a-role" id="roleLabel"></span><button class="a-logout" id="logoutBtn">Log out</button></div>
     </div>
     <nav class="container a-tabs" id="tabs">
       <button class="a-tab active" data-tab="orders">Orders <span class="a-badge" id="pendingBadge" hidden>0</span></button>
       <button class="a-tab" data-tab="products">Cars</button>
-      <button class="a-tab" data-tab="settings">Settings</button>
+      <button class="a-tab" data-tab="shop">My shop</button>
+      <button class="a-tab" data-tab="sellers" data-role="admin">Sellers</button>
+      <button class="a-tab" data-tab="settings" data-role="admin">Settings</button>
     </nav>
   </header>
 
@@ -52,6 +54,7 @@
         <div class="chips" id="statusChips"></div>
         <div class="a-toolbar-row">
           <input class="search" id="orderSearch" type="search" placeholder="Search code, name, phone…">
+          <select class="search sort" id="orderSeller" data-role="admin" aria-label="Seller"></select>
           <button class="btn btn-ghost" id="refreshOrders" title="Refresh">↻</button>
         </div>
       </div>
@@ -62,38 +65,41 @@
     <section id="tab-products" class="a-section" hidden>
       <div class="a-toolbar-row">
         <input class="search" id="productSearch" type="search" placeholder="Search cars…">
+        <select class="search sort" id="productSeller" data-role="admin" aria-label="Seller"></select>
         <button class="btn btn-primary" id="addProduct">+ Add car</button>
       </div>
       <div class="a-sub muted small" id="productStats"></div>
       <div id="productList" class="a-list"></div>
     </section>
 
-    <!-- SETTINGS -->
-    <section id="tab-settings" class="a-section" hidden>
-      <form id="settingsForm" class="panel" novalidate>
-        <h2 class="panel-title">Store & payment</h2>
+    <!-- MY SHOP (every seller, incl. master) -->
+    <section id="tab-shop" class="a-section" hidden>
+      <form id="shopForm" class="panel" novalidate>
+        <h2 class="panel-title">My shop &amp; payment</h2>
+        <p class="muted small">Buyers see your shop name and WhatsApp on your cars, and pay your UPI directly at checkout.</p>
         <div class="two">
-          <div class="field"><label for="s_store_name">Store name</label><input class="input" id="s_store_name"></div>
-          <div class="field"><label for="s_whatsapp_number">WhatsApp number</label>
-            <input class="input" id="s_whatsapp_number" inputmode="numeric" placeholder="91XXXXXXXXXX"></div>
+          <div class="field"><label for="m_shop_name">Shop name *</label><input class="input" id="m_shop_name" required></div>
+          <div class="field"><label for="m_whatsapp">WhatsApp number *</label>
+            <input class="input" id="m_whatsapp" inputmode="numeric" maxlength="13" placeholder="10-digit number" required></div>
         </div>
         <div class="two">
-          <div class="field"><label for="s_upi_id">UPI ID</label><input class="input" id="s_upi_id" placeholder="name@okicici" autocapitalize="off"></div>
-          <div class="field"><label for="s_payee_name">Payee name (as in bank)</label><input class="input" id="s_payee_name"></div>
+          <div class="field"><label for="m_upi_id">UPI ID *</label><input class="input" id="m_upi_id" placeholder="name@okicici" autocapitalize="off" required></div>
+          <div class="field"><label for="m_payee_name">Payee name (as in bank)</label><input class="input" id="m_payee_name"></div>
         </div>
-        <div class="field"><label for="s_outside_goa_shipping">Shipping charge outside Goa (₹)</label>
-          <input class="input" id="s_outside_goa_shipping" type="number" min="0" step="1" inputmode="numeric"></div>
-
+        <div class="field"><label for="m_outside_goa_shipping">Your shipping charge outside Goa (₹)</label>
+          <input class="input" id="m_outside_goa_shipping" type="number" min="0" step="1" inputmode="numeric">
+          <span class="muted small">Goa is always free.</span></div>
         <div class="field">
           <label>Backup QR image (optional)</label>
-          <p class="muted small">Checkout makes a QR with the exact amount from your UPI ID automatically. This image is only shown if that fails or no UPI ID is set.</p>
+          <p class="muted small">Checkout builds a QR with the exact amount from your UPI ID. This image is only used if that fails.</p>
           <div class="qr-row">
             <img id="qrPreview" class="qr-preview" alt="" hidden>
             <label class="btn btn-ghost">Upload QR<input type="file" id="qrFile" accept="image/*" hidden></label>
             <button type="button" class="link-btn" id="qrRemove" hidden>Remove</button>
           </div>
         </div>
-        <button class="btn btn-primary" id="saveSettings" type="submit">Save settings</button>
+        <p class="form-error" id="shopError" hidden></p>
+        <button class="btn btn-primary" id="saveShop" type="submit">Save my shop</button>
       </form>
 
       <form id="passwordForm" class="panel" novalidate>
@@ -103,6 +109,37 @@
           <div class="field"><label for="newPass2">Repeat password</label><input class="input" id="newPass2" type="password" autocomplete="new-password"></div>
         </div>
         <button class="btn btn-dark" type="submit">Update password</button>
+      </form>
+    </section>
+
+    <!-- SELLERS (master only) -->
+    <section id="tab-sellers" class="a-section" hidden>
+      <div class="a-toolbar-row">
+        <div class="a-sub muted small grow" id="sellerStats"></div>
+        <button class="btn btn-primary" id="addSeller">+ Add seller</button>
+      </div>
+      <div id="sellerList" class="a-list"></div>
+      <div class="panel a-help">
+        <h2 class="panel-title">Adding a seller</h2>
+        <ol>
+          <li>Supabase → <b>Authentication → Users → Add user</b>: their email + a password, tick <b>Auto Confirm User</b>.</li>
+          <li>Here: <b>+ Add seller</b> → shop name, WhatsApp and that same email.</li>
+          <li>Send them the link <b>mhcdiecast.com/admin.html</b> with their email and password.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- SETTINGS (master only) -->
+    <section id="tab-settings" class="a-section" hidden>
+      <form id="settingsForm" class="panel" novalidate>
+        <h2 class="panel-title">Store</h2>
+        <div class="two">
+          <div class="field"><label for="s_store_name">Store name</label><input class="input" id="s_store_name"></div>
+          <div class="field"><label for="s_whatsapp_number">Store WhatsApp (floating button &amp; Contact page)</label>
+            <input class="input" id="s_whatsapp_number" inputmode="numeric" placeholder="10-digit number"></div>
+        </div>
+        <p class="muted small">Payment details and shipping rates are now set per seller in <b>My shop</b>.</p>
+        <button class="btn btn-primary" id="saveSettings" type="submit">Save settings</button>
       </form>
     </section>
   </main>
@@ -130,6 +167,8 @@
       </label>
     </div>
 
+    <div class="field" data-role="admin"><label for="p_seller">Seller *</label>
+      <select class="input" id="p_seller"></select></div>
     <div class="field"><label for="p_name">Car name *</label><input class="input" id="p_name" placeholder="'67 Camaro" required></div>
     <div class="two">
       <div class="field"><label for="p_brand">Brand *</label><input class="input" id="p_brand" list="brandList" value="Hot Wheels" required>
@@ -164,6 +203,33 @@
       <span class="grow"></span>
       <button type="button" class="btn btn-ghost" data-close>Cancel</button>
       <button type="submit" class="btn btn-primary" id="saveProduct">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="sellerDialog" class="a-dialog">
+  <form id="sellerForm" method="dialog" novalidate>
+    <h2 class="panel-title" id="sellerDialogTitle">Add seller</h2>
+    <div class="two">
+      <div class="field"><label for="d_shop_name">Shop name *</label><input class="input" id="d_shop_name" required></div>
+      <div class="field"><label for="d_whatsapp">WhatsApp number *</label><input class="input" id="d_whatsapp" inputmode="numeric" maxlength="13" required></div>
+    </div>
+    <div class="field"><label for="d_email">Login email</label>
+      <input class="input" id="d_email" type="email" autocapitalize="off" placeholder="Same email you created in Supabase → Authentication">
+      <span class="muted small">Leave empty to link later. Clear it to remove their access.</span></div>
+    <div class="two">
+      <div class="field"><label for="d_upi_id">UPI ID</label><input class="input" id="d_upi_id" autocapitalize="off" placeholder="They can fill this in themselves"></div>
+      <div class="field"><label for="d_payee_name">Payee name</label><input class="input" id="d_payee_name"></div>
+    </div>
+    <div class="two">
+      <div class="field"><label for="d_outside_goa_shipping">Shipping outside Goa (₹)</label><input class="input" id="d_outside_goa_shipping" type="number" min="0" value="100"></div>
+      <div class="field toggle-field"><label class="toggle"><input type="checkbox" id="d_active" checked><span></span> Active (cars visible, can log in)</label></div>
+    </div>
+    <p class="form-error" id="sellerError" hidden></p>
+    <div class="dialog-actions">
+      <span class="grow"></span>
+      <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+      <button type="submit" class="btn btn-primary" id="saveSeller">Save seller</button>
     </div>
   </form>
 </dialog>

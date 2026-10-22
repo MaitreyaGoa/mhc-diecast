@@ -50,38 +50,13 @@
         <button class="btn btn-primary btn-block" type="submit" id="toPay">Continue to payment</button>
       </form>
 
-      <!-- STEP 2: pay by UPI + upload screenshot -->
-      <section id="payBox" class="panel" hidden>
-        <h2 class="panel-title">Pay <span id="payAmount" class="amount"></span> by UPI</h2>
-        <div class="pay-grid">
-          <div class="qr-wrap">
-            <div id="qr" class="qr"></div>
-            <a class="btn btn-dark btn-block upi-app" id="upiApp" href="#">Open UPI app to pay</a>
-          </div>
-          <div class="pay-info">
-            <ol class="pay-steps">
-              <li>Scan the QR with GPay, PhonePe, Paytm or any UPI app.</li>
-              <li>Pay exactly <b id="payAmount2"></b>.</li>
-              <li>Take a screenshot of the success screen and upload it below.</li>
-            </ol>
-            <div class="upi-id">UPI ID: <b id="upiId"></b> <button type="button" class="link-btn" id="copyUpi">Copy</button></div>
-            <div class="muted small" id="payee"></div>
-          </div>
-        </div>
-
+      <!-- STEP 2: pay each seller by UPI + upload screenshot -->
+      <section id="payBox" hidden>
+        <div class="pay-intro" id="payIntro"></div>
         <form id="payForm" novalidate>
-          <div class="field">
-            <label for="shot">Payment screenshot *</label>
-            <label class="upload" id="uploadBox">
-              <input type="file" id="shot" accept="image/*" required>
-              <span id="uploadText">📷 Tap to choose screenshot</span>
-              <img id="shotPreview" alt="Screenshot preview" hidden>
-            </label>
-          </div>
-          <div class="field"><label for="utr">UPI reference / UTR number (optional)</label>
-            <input class="input" id="utr" inputmode="numeric" maxlength="22" placeholder="12-digit number shown after payment"></div>
+          <div id="payGroups"></div>
           <p class="form-error" id="payError" hidden></p>
-          <button class="btn btn-primary btn-block" type="submit" id="placeBtn">Submit payment & place order</button>
+          <button class="btn btn-primary btn-block" type="submit" id="placeBtn">Submit payment &amp; place order</button>
           <button class="link-btn back-link" type="button" id="backToDetails">← Edit delivery details</button>
         </form>
       </section>
@@ -89,13 +64,12 @@
       <!-- STEP 3: success -->
       <section id="doneBox" class="panel done-box" hidden>
         <div class="done-ico">🏁</div>
-        <h2>Order placed!</h2>
-        <p>Your order code is</p>
-        <div class="order-code" id="orderCode"></div>
-        <p class="muted">We'll verify your payment and confirm the order shortly. Save this code to track your order.</p>
+        <h2 id="doneTitle">Order placed!</h2>
+        <p id="doneLead">Your order code is</p>
+        <div id="doneCodes"></div>
+        <p class="muted">The seller will verify your payment and confirm shortly. Save your code to track your order.</p>
         <div class="done-actions">
           <a class="btn btn-primary" id="trackLink" href="track.html">Track order</a>
-          <a class="btn btn-ghost" id="waLink" target="_blank" rel="noopener" hidden>Message us on WhatsApp</a>
           <a class="btn btn-ghost" href="index.html">Keep shopping</a>
         </div>
       </section>
