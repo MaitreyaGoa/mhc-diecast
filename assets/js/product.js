@@ -1,6 +1,6 @@
 // Product detail page — product.html?id=<uuid>
 (async function () {
-  const { sb, esc, money, cover, param, Cart, toast, errMsg } = window.MHC;
+  const { sb, esc, money, cover, param, Cart, toast, errMsg, getSellers, getSettings, sellerFor, waLink } = window.MHC;
   const box = document.getElementById('product');
   const id = param('id');
   if (!id) { box.innerHTML = '<p class="empty">Car not found. <a href="index.html">Back to shop</a></p>'; return; }
@@ -10,11 +10,23 @@
     const { data, error } = await sb.from('products').select('*').eq('id', id).maybeSingle();
     if (error) throw error;
     p = data;
+    var sellers = await getSellers();
+    var settings = await getSettings().catch(() => null);
   } catch (e) {
     box.innerHTML = `<p class="empty">Couldn't load this car. ${esc(errMsg(e))}</p>`; return;
   }
   if (!p || !p.is_active) {
     box.innerHTML = '<p class="empty">This car is no longer listed. <a href="index.html">See other cars</a></p>'; return;
+  }
+
+  const seller = sellerFor(p.seller_id, sellers, settings);
+  function sellerBlock() {
+    if (!seller || !seller.whatsapp) return '';
+    const msg = `Hi ${seller.shop_name}! I'm interested in ${p.name} (${money(p.price)}) on MHC Diecast: ${location.href}`;
+    return `<div class="seller-box">
+      <div><span class="muted small">Sold by</span><b>${esc(seller.shop_name)}</b></div>
+      <a class="btn btn-wa" href="${esc(waLink(seller.whatsapp, msg))}" target="_blank" rel="noopener">Chat with seller</a>
+    </div>`;
   }
 
   document.title = `${p.name} — ${p.brand} ${p.scale || ''} | MHC Diecast`;
@@ -58,9 +70,10 @@
       <button class="btn btn-dark btn-block" id="buyBtn">Buy now</button>`}
       ${p.category === 'Pre-owned' ? '<div class="notice">Pre-owned: priced on condition and rarity, not card MRP. Please read the description and check the photos.</div>' : ''}
       ${p.description ? `<div class="desc">${esc(p.description).replace(/\n/g, '<br>')}</div>` : ''}
+      ${sellerBlock()}
       <div class="ship-note">
         <div>🏝️ <b>Free shipping</b> anywhere in Goa</div>
-        <div>🚚 Pan-India delivery — shipping charges added at checkout</div>
+        <div>🚚 Pan-India delivery — ${seller.outside_goa_shipping > 0 ? `${money(seller.outside_goa_shipping)} shipping added at checkout` : 'shipping added at checkout'}</div>
         <div>✅ Pay by UPI — your order is confirmed once we verify the payment</div>
       </div>
       <button class="link-btn share-btn" id="shareBtn" type="button">↗ Share this car</button>

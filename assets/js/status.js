@@ -67,6 +67,14 @@
     return ['bad', 'Function accepted an empty order — re-run schema.sql.'];
   });
 
+  await check('Multi-seller update installed', async () => {
+    const { data, error } = await sb.from('sellers').select('id,shop_name,whatsapp,upi_id').eq('is_active', true);
+    if (error) return ['warn', 'Not yet — run supabase/phase7-sellers.sql to enable seller accounts.'];
+    const noUpi = (data || []).filter(s => !s.upi_id).map(s => s.shop_name);
+    return noUpi.length ? ['warn', `${data.length} active seller(s). Missing UPI: ${noUpi.join(', ')}`]
+                        : ['ok', `${data.length} active seller(s): ${data.map(s => s.shop_name).join(', ')}`];
+  });
+
   await check('Payment screenshots are private', async () => {
     const { data, error } = await sb.storage.from('payment-screenshots').list('', { limit: 1 });
     if (error) return ['ok', 'Blocked as expected.'];

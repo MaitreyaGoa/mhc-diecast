@@ -1,5 +1,5 @@
 // =====================================================================
-//  MHC Diecast — admin panel (orders, cars, settings)
+//  MHC Diecast — admin panel (master admin + sellers)
 // =====================================================================
 (function () {
   const { C, esc, money, placeholder, toast } = window.MHC;
@@ -13,29 +13,48 @@
   const state = {
     status: 'pending', orders: [], counts: {}, shots: {},
     products: [], settings: null,
+    role: null, me: null, uid: null, sellers: [], sellerFilter: '', productSellerFilter: '',
     edit: null, editImages: [], removedImages: [], uploading: 0,
     lastPending: null, poll: null
   };
   const errText = e => (e && (e.message || e.error_description)) || 'Something went wrong';
 
   // ------------------------------------------------------------------ AUTH
+  const isMaster = () => state.role === 'admin';
+  async function loadProfile() {
+    const { data: u } = await sb.auth.getUser();
+    state.uid = u && u.user ? u.user.id : null;
+    const { data, error } = await sb.rpc('my_profile');
+    if (!error && data && data.role) { state.role = data.role; state.me = data.seller || null; return true; }
+    // before the multi-seller update is installed: fall back to the old admin check
+    const old = await sb.rpc('is_admin');
+    if (!old.error && old.data === true) { state.role = 'admin'; state.me = null; return true; }
+    state.role = null; state.me = null; return false;
+  }
   async function boot() {
     const { data } = await sb.auth.getSession();
-    if (data.session && await isAdmin()) showApp();
+    if (data.session && await loadProfile()) showApp();
     else { if (data.session) await sb.auth.signOut(); showLogin(); }
-  }
-  async function isAdmin() {
-    const { data, error } = await sb.rpc('is_admin');
-    return !error && data === true;
   }
   function showLogin() {
     $('appView').hidden = true; $('loginView').hidden = false;
     clearInterval(state.poll);
     $('email').focus();
   }
-  function showApp() {
+  function applyRole() {
+    document.querySelectorAll('[data-role="admin"]').forEach(el => { el.hidden = !isMaster(); });
+    $('roleLabel').textContent = isMaster() ? 'Master admin' : (state.me ? state.me.shop_name : '');
+    document.body.classList.toggle('is-seller', !isMaster());
+  }
+  async function showApp() {
     $('loginView').hidden = true; $('appView').hidden = false;
-    loadOrders(); loadProducts(); loadSettings();
+    applyRole();
+    await loadSellers();
+    loadOrders(); loadProducts(); loadShop();
+    if (isMaster()) loadSettings();
+    if (!state.me) $('shopError').textContent = isMaster()
+      ? 'Run supabase/phase7-sellers.sql in Supabase to set up your shop and sellers.' : '';
+    $('shopError').hidden = !!state.me;
     clearInterval(state.poll);
     state.poll = setInterval(() => { if (!document.hidden) loadOrders(true); }, 60000);
   }
@@ -45,15 +64,32 @@
     const btn = $('loginBtn'), err = $('loginError');
     err.hidden = true; btn.disabled = true; btn.textContent = 'Logging in…';
     const { error } = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
-    if (!error && await isAdmin()) { $('password').value = ''; showApp(); }
+    if (!error && await loadProfile()) { $('password').value = ''; showApp(); }
     else {
       if (!error) await sb.auth.signOut();
-      err.textContent = error ? 'Wrong email or password.' : 'This account is not an admin.';
+      err.textContent = error ? 'Wrong email or password.' : 'This account has no shop access yet, or it is paused. Contact the store admin.';
       err.hidden = false;
     }
     btn.disabled = false; btn.textContent = 'Log in';
   });
   $('logoutBtn').onclick = async () => { await sb.auth.signOut(); showLogin(); };
+
+  // ------------------------------------------------------------------ SELLERS (data)
+  const sellerName = id => { const s = state.sellers.find(x => x.id === id); return s ? s.shop_name : 'No seller'; };
+  async function loadSellers() {
+    if (isMaster()) {
+      const { data, error } = await sb.rpc('admin_list_sellers');
+      state.sellers = error ? [] : (data || []);
+    } else state.sellers = state.me ? [state.me] : [];
+    const opts = state.sellers.map(s => `<option value="${esc(s.id)}">${esc(s.shop_name)}${s.is_active ? '' : ' (paused)'}</option>`).join('');
+    $('orderSeller').innerHTML = '<option value="">All sellers</option>' + opts;
+    $('productSeller').innerHTML = '<option value="">All sellers</option>' + opts;
+    $('orderSeller').value = state.sellerFilter; $('productSeller').value = state.productSellerFilter;
+    $('p_seller').innerHTML = opts;
+    if (isMaster()) renderSellers();
+  }
+  $('orderSeller').addEventListener('change', e => { state.sellerFilter = e.target.value; loadOrders(); });
+  $('productSeller').addEventListener('change', e => { state.productSellerFilter = e.target.value; renderProducts(); });
 
   // ------------------------------------------------------------------ TABS
   $('tabs').addEventListener('click', e => {
@@ -76,11 +112,14 @@
     if (!silent) list.innerHTML = '<p class="empty">Loading orders…</p>';
     try {
       const [cnt, res] = await Promise.all([
-        sb.from('orders').select('status').limit(5000),
+        (() => { let c = sb.from('orders').select('status').limit(5000);
+                 if (isMaster() && state.sellerFilter) c = c.eq('seller_id', state.sellerFilter);
+                 return c; })(),
         (() => {
           // Pending: oldest first so nothing waits too long. Others: newest first.
           let q = sb.from('orders').select('*').order('created_at', { ascending: state.status === 'pending' }).limit(150);
           if (state.status !== 'all') q = q.eq('status', state.status);
+          if (isMaster() && state.sellerFilter) q = q.eq('seller_id', state.sellerFilter);
           return q;
         })()
       ]);
@@ -151,7 +190,8 @@
       <article class="a-order${overdue ? ' overdue' : ''}" data-id="${esc(o.id)}">
         ${overdue ? `<div class="overdue-bar">⏰ Waiting ${hours >= 48 ? Math.floor(hours / 24) + ' days' : hours + ' hours'} — please verify</div>` : ''}
         <header class="a-order-head">
-          <div><b class="mono">${esc(o.order_code)}</b> <span class="status ${esc(o.status)}">${esc(o.status)}</span></div>
+          <div><b class="mono">${esc(o.order_code)}</b> <span class="status ${esc(o.status)}">${esc(o.status)}</span>
+            ${isMaster() && state.sellers.length > 1 ? `<span class="pill seller">${esc(sellerName(o.seller_id))}</span>` : ''}</div>
           <span class="muted small">${date}</span>
         </header>
         <div class="a-order-body">
@@ -197,7 +237,7 @@
       pending:   `Hi ${name}, we've received your order ${o.order_code} (${money(o.total)}). We're verifying your payment and will confirm shortly.`,
       confirmed: `Hi ${name}, payment received ✅ Your order ${o.order_code} is confirmed and will be shipped soon.\nTrack: ${track}`,
       shipped:   `Hi ${name}, your order ${o.order_code} has been shipped 🚚${o.tracking_number ? `\nTracking no: ${o.tracking_number}` : ''}\nTrack: ${track}`,
-      delivered: `Hi ${name}, your order ${o.order_code} has been delivered. Thank you for shopping with ${C.STORE_NAME}! 🏁`,
+      delivered: `Hi ${name}, your order ${o.order_code} has been delivered. Thank you for shopping with ${o.seller_id ? sellerName(o.seller_id) : C.STORE_NAME}! 🏁`,
       rejected:  `Hi ${name}, we couldn't verify the payment for order ${o.order_code}. Please reply with the correct screenshot / UTR so we can help.`,
       cancelled: `Hi ${name}, your order ${o.order_code} has been cancelled. Any amount paid will be refunded. Sorry for the trouble.`
     }[status || o.status];
@@ -231,7 +271,7 @@
       if (tn === null) return;
       patch.tracking_number = tn.trim() || null;
     } else if (act === 'confirmed') {
-      if (!confirm(`Approve payment of ${money(o.total)} for ${o.order_code}?\nCheck the amount and that it reached your account.`)) return;
+      if (!confirm(`Approve payment of ${money(o.total)} for ${o.order_code}?\nCheck the amount reached ${isMaster() && o.seller_id && (!state.me || o.seller_id !== state.me.id) ? sellerName(o.seller_id) + "'s" : 'your'} UPI account.`)) return;
     }
 
     btn.disabled = true;
@@ -247,7 +287,9 @@
 
   // ------------------------------------------------------------------ PRODUCTS
   async function loadProducts() {
-    const { data, error } = await sb.from('products').select('*').order('created_at', { ascending: false });
+    let q = sb.from('products').select('*').order('created_at', { ascending: false });
+    if (!isMaster()) q = q.eq('seller_id', state.me ? state.me.id : '00000000-0000-0000-0000-000000000000');
+    const { data, error } = await q;
     if (error) { $('productList').innerHTML = `<p class="empty">${esc(errText(error))}</p>`; return; }
     state.products = data || [];
     const uniq = k => [...new Set(state.products.map(p => p[k]).filter(Boolean))].sort();
@@ -278,7 +320,7 @@
 
   function renderProducts() {
     const term = $('productSearch').value.trim().toLowerCase();
-    const ps = state.products;
+    const ps = state.products.filter(p => !isMaster() || !state.productSellerFilter || p.seller_id === state.productSellerFilter);
     const live = ps.filter(p => p.is_active && p.stock > 0).length;
     $('productStats').textContent = `${ps.length} cars · ${live} on sale · ${ps.filter(p => p.stock <= 0).length} sold out · ${ps.filter(p => !p.is_active).length} hidden`;
     const list = ps.filter(p => !term || [p.name, p.brand, p.series, p.category].join(' ').toLowerCase().includes(term));
@@ -288,7 +330,8 @@
         <div class="a-prod-info">
           <span class="card-brand">${esc(p.brand)}${p.series ? ' · ' + esc(p.series) : ''}</span>
           <b>${esc(p.name)}</b>
-          ${p.category ? `<span class="pill cat">${esc(p.category)}</span>` : '<span class="pill bad">No category</span>'}
+          <span class="a-pills">${p.category ? `<span class="pill cat">${esc(p.category)}</span>` : '<span class="pill bad">No category</span>'}
+            ${isMaster() && state.sellers.length > 1 ? `<span class="pill seller">${esc(sellerName(p.seller_id))}</span>` : ''}</span>
           <span class="small">${money(p.price)} <span class="muted">MRP ${money(p.mrp)}</span>
             ${p.is_active ? '' : '<span class="pill">Hidden</span>'}${p.stock <= 0 ? '<span class="pill bad">Sold out</span>' : ''}</span>
         </div>
@@ -330,6 +373,7 @@
     $('p_stock').value = p ? p.stock : 1;
     $('p_scale').value = p ? (p.scale || '1:64') : '1:64';
     $('p_category').value = p ? (p.category || '') : '';
+    if (isMaster()) $('p_seller').value = p ? (p.seller_id || '') : (state.productSellerFilter || (state.me && state.me.id) || (state.sellers[0] && state.sellers[0].id) || '');
     fillSeries();
     $('p_active').checked = p ? p.is_active : true;
     $('p_description').value = p ? (p.description || '') : '';
@@ -409,6 +453,7 @@
       series: $('p_series').value.trim() || null,
       scale: $('p_scale').value.trim() || '1:64',
       category: $('p_category').value || null,
+      seller_id: isMaster() ? ($('p_seller').value || null) : (state.me && state.me.id),
       mrp: Number($('p_mrp').value),
       price: Number($('p_price').value),
       stock: parseInt($('p_stock').value, 10),
@@ -419,6 +464,8 @@
     };
     if (!row.name) return show('Enter the car name.', 'p_name');
     if (!row.category) return show('Choose a category.', 'p_category');
+    if (!row.seller_id && state.sellers.length) return show('Choose the seller.', 'p_seller');
+    if (!state.sellers.length) delete row.seller_id;   // before the multi-seller update
     if (!(row.mrp >= 0) || $('p_mrp').value === '') return show('Enter the MRP.', 'p_mrp');
     if (!(row.price >= 0) || $('p_price').value === '') return show('Enter the selling price.', 'p_price');
     if (!(row.stock >= 0)) return show('Stock must be 0 or more.', 'p_stock');
@@ -462,29 +509,21 @@
     loadProducts();
   };
 
-  // ------------------------------------------------------------------ SETTINGS
-  const SFIELDS = ['store_name', 'whatsapp_number', 'upi_id', 'payee_name', 'outside_goa_shipping'];
+  // ------------------------------------------------------------------ SETTINGS (master)
+  const SFIELDS = ['store_name', 'whatsapp_number'];
   async function loadSettings() {
     const { data, error } = await sb.from('settings').select('*').eq('id', 1).single();
     if (error) { toast(errText(error), 'warn'); return; }
     state.settings = data;
     SFIELDS.forEach(k => { $('s_' + k).value = data[k] == null ? '' : data[k]; });
-    showQr(data.qr_image_url);
   }
-  function showQr(url) {
-    $('qrPreview').hidden = !url; $('qrRemove').hidden = !url;
-    if (url) $('qrPreview').src = url;
-  }
-
   $('settingsForm').addEventListener('submit', async e => {
     e.preventDefault();
     const row = {};
     SFIELDS.forEach(k => { row[k] = $('s_' + k).value.trim() || null; });
     row.whatsapp_number = row.whatsapp_number ? row.whatsapp_number.replace(/\D/g, '') : null;
     if (row.whatsapp_number && row.whatsapp_number.length === 10) row.whatsapp_number = '91' + row.whatsapp_number;
-    row.outside_goa_shipping = Number(row.outside_goa_shipping || 0);
     row.store_name = row.store_name || 'MHC Diecast';
-    if (row.upi_id && !/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(row.upi_id)) { toast('UPI ID looks wrong (e.g. name@okicici)', 'warn'); return; }
     row.updated_at = new Date().toISOString();
     const btn = $('saveSettings'); btn.disabled = true;
     const { error } = await sb.from('settings').update(row).eq('id', 1);
@@ -494,25 +533,156 @@
     loadSettings();
   });
 
+  // ------------------------------------------------------------------ MY SHOP (every seller)
+  const MFIELDS = ['shop_name', 'whatsapp', 'upi_id', 'payee_name', 'outside_goa_shipping'];
+  const validWa = v => /^[6-9]\d{9}$/.test(String(v).replace(/\D/g, '').replace(/^91(?=\d{10}$)/, ''));
+  const validUpi = v => /^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(v);
+  function loadShop() {
+    const m = state.me;
+    $('shopForm').querySelectorAll('input, button').forEach(el => { el.disabled = !m; });
+    if (!m) return;
+    MFIELDS.forEach(k => { $('m_' + k).value = m[k] == null ? '' : m[k]; });
+    showQr(m.qr_image_url);
+  }
+  function showQr(url) {
+    $('qrPreview').hidden = !url; $('qrRemove').hidden = !url;
+    if (url) $('qrPreview').src = url;
+  }
+  async function refreshMe() {
+    const { data } = await sb.rpc('my_profile');
+    if (data && data.seller) state.me = data.seller;
+    await loadSellers(); applyRole(); loadShop();
+  }
+  $('shopForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const err = $('shopError');
+    const show = (m, f) => { err.textContent = m; err.hidden = false; if (f) $(f).focus(); };
+    err.hidden = true;
+    const row = {};
+    MFIELDS.forEach(k => { row[k] = $('m_' + k).value.trim() || null; });
+    if (!row.shop_name) return show('Enter your shop name.', 'm_shop_name');
+    if (!row.whatsapp || !validWa(row.whatsapp)) return show('Enter a valid 10-digit WhatsApp number — buyers contact you on it.', 'm_whatsapp');
+    if (!row.upi_id || !validUpi(row.upi_id)) return show('Enter a valid UPI ID (e.g. name@okicici) — buyers pay you on it.', 'm_upi_id');
+    row.outside_goa_shipping = Number(row.outside_goa_shipping || 0);
+    const btn = $('saveShop'); btn.disabled = true;
+    const { error } = await sb.from('sellers').update(row).eq('id', state.me.id);
+    btn.disabled = false;
+    if (error) return show(errText(error));
+    toast('Shop details saved', 'ok');
+    refreshMe();
+  });
   $('qrFile').addEventListener('change', async e => {
     const f = e.target.files[0]; e.target.value = '';
-    if (!f) return;
+    if (!f || !state.me) return;
     try {
-      const old = state.settings && state.settings.qr_image_url;
-      const url = await uploadImage('site-assets', 'qr', f);
-      const { error } = await sb.from('settings').update({ qr_image_url: url }).eq('id', 1);
+      const old = state.me.qr_image_url;
+      const url = await uploadImage('site-assets', 'qr/' + state.me.id, f);
+      const { error } = await sb.from('sellers').update({ qr_image_url: url }).eq('id', state.me.id);
       if (error) throw error;
       if (old) { const p = pathFromUrl(old, 'site-assets'); if (p) sb.storage.from('site-assets').remove([p]); }
-      state.settings.qr_image_url = url; showQr(url); toast('QR uploaded', 'ok');
+      state.me.qr_image_url = url; showQr(url); toast('QR uploaded', 'ok');
     } catch (err) { toast('QR upload failed: ' + errText(err), 'warn'); }
   });
   $('qrRemove').onclick = async () => {
-    const old = state.settings.qr_image_url;
-    const { error } = await sb.from('settings').update({ qr_image_url: null }).eq('id', 1);
+    const old = state.me.qr_image_url;
+    const { error } = await sb.from('sellers').update({ qr_image_url: null }).eq('id', state.me.id);
     if (error) { toast(errText(error), 'warn'); return; }
     const p = pathFromUrl(old || '', 'site-assets'); if (p) sb.storage.from('site-assets').remove([p]);
-    state.settings.qr_image_url = null; showQr(null);
+    state.me.qr_image_url = null; showQr(null);
   };
+
+  // ------------------------------------------------------------------ SELLERS TAB (master)
+  const MAX_SELLERS = Number(C.MAX_SELLERS || 5);
+  const others = () => state.sellers.filter(s => s.user_id !== state.uid);
+  async function renderSellers() {
+    const [cars, pend] = await Promise.all([
+      sb.from('products').select('seller_id').limit(10000),
+      sb.from('orders').select('seller_id').eq('status', 'pending').limit(10000)
+    ]);
+    const tally = rows => (rows.data || []).reduce((m, r) => (m[r.seller_id] = (m[r.seller_id] || 0) + 1, m), {});
+    const nCars = tally(cars), nPend = tally(pend);
+    const n = others().length;
+    $('sellerStats').textContent = `${n} of ${MAX_SELLERS} sellers · plus your own shop`;
+    $('addSeller').disabled = n >= MAX_SELLERS;
+    $('sellerList').innerHTML = state.sellers.length ? state.sellers.map(s => `
+      <div class="a-seller${s.is_active ? '' : ' hidden-prod'}" data-id="${esc(s.id)}">
+        <div class="a-seller-info">
+          <b>${esc(s.shop_name)}${s.user_id === state.uid ? ' <span class="pill cat">You</span>' : ''}${s.is_active ? '' : ' <span class="pill bad">Paused</span>'}</b>
+          <span class="small">💬 <a href="https://wa.me/91${esc(s.whatsapp)}" target="_blank" rel="noopener">${esc(s.whatsapp)}</a>
+            · ${s.upi_id ? 'UPI ' + esc(s.upi_id) : '<span class="bad">No UPI yet</span>'}
+            · Outside Goa ${money(s.outside_goa_shipping)}</span>
+          <span class="small muted">${s.login_email ? '🔑 ' + esc(s.login_email) : '<span class="warn">No login linked</span>'}
+            · ${nCars[s.id] || 0} cars · ${nPend[s.id] || 0} pending orders</span>
+        </div>
+        <button class="btn btn-ghost sm" data-act="edit-seller">Edit</button>
+      </div>`).join('')
+      : '<p class="empty">Run supabase/phase7-sellers.sql first, then add sellers here.</p>';
+  }
+  $('addSeller').onclick = () => openSeller(null);
+  $('sellerList').addEventListener('click', e => {
+    const b = e.target.closest('[data-act="edit-seller"]'); if (!b) return;
+    openSeller(state.sellers.find(s => s.id === b.closest('.a-seller').dataset.id));
+  });
+  let editingSeller = null;
+  function openSeller(s) {
+    editingSeller = s;
+    $('sellerDialogTitle').textContent = s ? 'Edit seller' : 'Add seller';
+    $('d_shop_name').value = s ? s.shop_name : '';
+    $('d_whatsapp').value = s ? s.whatsapp : '';
+    $('d_email').value = s ? (s.login_email || '') : '';
+    $('d_upi_id').value = s ? (s.upi_id || '') : '';
+    $('d_payee_name').value = s ? (s.payee_name || '') : '';
+    $('d_outside_goa_shipping').value = s ? s.outside_goa_shipping : 100;
+    $('d_active').checked = s ? s.is_active : true;
+    $('d_active').disabled = !!(s && s.user_id === state.uid);   // can't pause yourself
+    $('sellerError').hidden = true;
+    $('sellerDialog').showModal();
+  }
+  $('sellerForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const err = $('sellerError');
+    const show = (m, f) => { err.textContent = m; err.hidden = false; if (f) $(f).focus(); };
+    const row = {
+      shop_name: $('d_shop_name').value.trim(),
+      whatsapp: $('d_whatsapp').value.trim(),
+      upi_id: $('d_upi_id').value.trim() || null,
+      payee_name: $('d_payee_name').value.trim() || null,
+      outside_goa_shipping: Number($('d_outside_goa_shipping').value || 0),
+      is_active: $('d_active').checked
+    };
+    const email = $('d_email').value.trim().toLowerCase();
+    if (!row.shop_name) return show('Enter the shop name.', 'd_shop_name');
+    if (!validWa(row.whatsapp)) return show('Enter a valid 10-digit WhatsApp number.', 'd_whatsapp');
+    if (row.upi_id && !validUpi(row.upi_id)) return show('UPI ID looks wrong (e.g. name@okicici).', 'd_upi_id');
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) return show('Check the login email.', 'd_email');
+    const btn = $('saveSeller'); btn.disabled = true;
+    try {
+      let id = editingSeller && editingSeller.id;
+      if (id) {
+        const { error } = await sb.from('sellers').update(row).eq('id', id);
+        if (error) throw error;
+      } else {
+        const { data, error } = await sb.from('sellers').insert(row).select('id').single();
+        if (error) throw error;
+        id = data.id;
+        // if linking the login fails below, a retry edits this seller instead of adding it twice
+        editingSeller = { id, ...row, user_id: null, login_email: null, _justAdded: true };
+        $('sellerDialogTitle').textContent = 'Edit seller';
+      }
+      const oldEmail = editingSeller ? (editingSeller.login_email || '') : '';
+      if (email && email !== oldEmail) {
+        const { error } = await sb.rpc('admin_link_seller', { p_seller: id, p_email: email });
+        if (error) throw error;
+      } else if (!email && oldEmail && !(editingSeller.user_id === state.uid)) {
+        const { error } = await sb.from('sellers').update({ user_id: null, login_email: null }).eq('id', id);
+        if (error) throw error;
+      }
+      $('sellerDialog').close();
+      toast(editingSeller && !editingSeller._justAdded ? 'Seller updated' : 'Seller added', 'ok');
+      await loadSellers(); loadProducts();
+    } catch (x) { show(errText(x)); loadSellers(); }
+    finally { btn.disabled = false; }
+  });
 
   $('passwordForm').addEventListener('submit', async e => {
     e.preventDefault();

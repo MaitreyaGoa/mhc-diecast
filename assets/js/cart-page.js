@@ -1,6 +1,7 @@
 // Cart page — edit quantities, then go to checkout.
 (async function () {
-  const { esc, money, cover, Cart, getSettings, errMsg } = window.MHC;
+  const { esc, money, cover, Cart, getSettings, getSellers, sellerFor, errMsg } = window.MHC;
+  let sellers = [], settings = null;
   const itemsBox = document.getElementById('cartItems');
   const summary = document.getElementById('summary');
   const notesBox = document.getElementById('notes');
@@ -13,9 +14,8 @@
     notesBox.innerHTML = `<div class="notice bad">Couldn't check latest stock: ${esc(errMsg(e))}</div>`;
   }
   try {
-    const s = await getSettings();
-    document.getElementById('outsideRate').textContent = money(s.outside_goa_shipping);
-  } catch (e) { document.getElementById('outsideRate').textContent = 'charges apply'; }
+    [settings, sellers] = await Promise.all([getSettings(), getSellers()]);
+  } catch (e) { /* totals still work without seller details */ }
 
   function render() {
     const items = Cart.items();
@@ -24,7 +24,7 @@
       summary.hidden = true;
       return;
     }
-    itemsBox.innerHTML = items.map(i => `
+    const row = i => `
       <div class="cart-row" data-id="${esc(i.id)}">
         <a href="product.html?id=${encodeURIComponent(i.id)}" class="cart-thumb">
           <img src="${esc(cover(i))}" alt="${esc(i.name)}"></a>
@@ -42,7 +42,23 @@
           </div>
         </div>
         <b class="line-total">${money(i.price * i.qty)}</b>
-      </div>`).join('');
+      </div>`;
+    // group cars by seller — each seller is paid separately at checkout
+    const groups = [];
+    items.forEach(i => {
+      const k = i.seller_id || 'store';
+      let g = groups.find(x => x.k === k);
+      if (!g) groups.push(g = { k, seller: sellerFor(i.seller_id, sellers, settings), items: [] });
+      g.items.push(i);
+    });
+    const multi = groups.length > 1;
+    itemsBox.innerHTML = groups.map(g => `
+      ${multi || sellers.length > 1 ? `<div class="cart-seller"><span>Sold by <b>${esc(g.seller.shop_name)}</b></span>
+        <span class="muted small">${money(g.items.reduce((t, i) => t + i.price * i.qty, 0))} · outside Goa +${money(g.seller.outside_goa_shipping || 0)}</span></div>` : ''}
+      ${g.items.map(row).join('')}`).join('');
+    document.getElementById('outsideRate').textContent = multi
+      ? 'each seller\'s rate' : money(groups[0].seller.outside_goa_shipping || 0);
+    document.getElementById('multiNote').hidden = !multi;
     document.getElementById('subtotal').textContent = money(Cart.subtotal());
     summary.hidden = false;
   }

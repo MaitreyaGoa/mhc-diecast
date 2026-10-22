@@ -59,7 +59,7 @@
       const found = items.find(i => i.id === p.id);
       const max = Math.max(0, p.stock || 0);
       if (found) found.qty = Math.min(found.qty + qty, max);
-      else items.push({ id: p.id, name: p.name, brand: p.brand, price: Number(p.price),
+      else items.push({ id: p.id, name: p.name, brand: p.brand, price: Number(p.price), seller_id: p.seller_id || null,
                         mrp: Number(p.mrp), image: (p.images && p.images[0]) || '',
                         stock: max, qty: Math.min(qty, max) });
       this.save(items.filter(i => i.qty > 0));
@@ -77,7 +77,7 @@
       const items = this.items();
       if (!items.length || !sb) return [];
       const { data, error } = await sb.from('products')
-        .select('id,name,brand,price,mrp,stock,images,is_active')
+        .select('*')
         .in('id', items.map(i => i.id));
       if (error) throw error;
       const notes = [], next = [];
@@ -88,7 +88,7 @@
         if (Number(p.price) !== it.price) notes.push(`Price of ${p.name} changed to ${money(p.price)}.`);
         let qty = it.qty;
         if (qty > p.stock) { qty = p.stock; notes.push(`Only ${p.stock} left of ${p.name}; quantity updated.`); }
-        next.push({ ...it, name: p.name, brand: p.brand, price: Number(p.price), mrp: Number(p.mrp),
+        next.push({ ...it, name: p.name, brand: p.brand, price: Number(p.price), mrp: Number(p.mrp), seller_id: p.seller_id || null,
                     image: (p.images && p.images[0]) || '', stock: p.stock, qty });
       }
       this.save(next);
@@ -108,6 +108,30 @@
     settingsCache = data;
     return data;
   }
+  // ---------- sellers (public details: shop name, WhatsApp, UPI, shipping) ----------
+  let sellersCache = null;
+  async function getSellers() {
+    if (sellersCache) return sellersCache;
+    try {
+      const { data, error } = await sb.from('sellers')
+        .select('id,shop_name,whatsapp,upi_id,payee_name,qr_image_url,outside_goa_shipping,is_active');
+      sellersCache = error ? [] : (data || []).filter(s => s.is_active).map(s => {
+        const w = String(s.whatsapp || '').replace(/\D/g, '');
+        return { ...s, whatsapp: w.length === 10 ? '91' + w : (w || null) };
+      });
+    } catch (e) { sellersCache = []; }
+    return sellersCache;
+  }
+  // Seller of a car; falls back to the store's own details (single-seller setup)
+  function sellerFor(id, sellers, settings) {
+    const s = (sellers || []).find(x => x.id === id);
+    if (s) return s;
+    return { id: null, shop_name: (settings && settings.store_name) || C.STORE_NAME,
+             whatsapp: settings && settings.whatsapp_number, upi_id: settings && settings.upi_id,
+             payee_name: settings && settings.payee_name, qr_image_url: settings && settings.qr_image_url,
+             outside_goa_shipping: settings ? settings.outside_goa_shipping : 0 };
+  }
+
   const shippingFor = (pin, settings) => isGoa(pin) ? 0 : Number(settings.outside_goa_shipping || 0);
 
   const waLink = (number, text) =>
@@ -307,5 +331,5 @@
   document.addEventListener('DOMContentLoaded', () => { addScene(); renderChrome(); fillLogos(); enableTilt(); applyTheme(currentTheme(), false); });
 
   window.MHC = { C, sb, store, money, esc, param, isGoa, placeholder, cover, Cart,
-                 getSettings, shippingFor, waLink, toast, errMsg, updateCartCount };
+                 getSettings, getSellers, sellerFor, shippingFor, waLink, toast, errMsg, updateCartCount };
 })();

@@ -32,8 +32,11 @@
     let help = '';
     try {
       const s = await getSettings();
-      if (s.whatsapp_number) help = `<a class="btn btn-ghost btn-block" target="_blank" rel="noopener"
-        href="${esc(waLink(s.whatsapp_number, `Hi, I have a question about my order ${o.order_code}.`))}">Questions? WhatsApp us</a>`;
+      const w = String(o.seller_whatsapp || '').replace(/\D/g, '');
+      const num = w ? (w.length === 10 ? '91' + w : w) : s.whatsapp_number;
+      const who = o.seller_name || 'us';
+      if (num) help = `<a class="btn btn-ghost btn-block" target="_blank" rel="noopener"
+        href="${esc(waLink(num, `Hi ${o.seller_name || ''}, I have a question about my order ${o.order_code}.`))}">Questions? WhatsApp ${esc(who)}</a>`;
     } catch (e) { /* ignore */ }
 
     $('result').innerHTML = `
@@ -42,6 +45,7 @@
           <div><div class="muted small">Order</div><b class="mono">${esc(o.order_code)}</b></div>
           <span class="status ${esc(o.status)}">${esc(o.status)}</span>
         </div>
+        ${o.seller_name ? `<div class="small">Sold by <b>${esc(o.seller_name)}</b></div>` : ''}
         <div class="muted small">Placed ${new Date(o.created_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</div>
         ${failed ? `<div class="notice bad">This order was ${esc(o.status)}. If you paid, please contact us — we'll help right away.</div>` : timeline}
         ${o.tracking_number ? `<div class="notice">📦 Tracking number: <b class="mono">${esc(o.tracking_number)}</b></div>` : ''}
@@ -65,7 +69,7 @@
   if (mine.length) {
     $('recent').innerHTML = `<h2 class="panel-title">Your recent orders</h2><div class="recent-list">${mine.map(m =>
       `<button class="recent" data-code="${esc(m.code)}" data-phone="${esc(m.phone)}">
-         <b class="mono">${esc(m.code)}</b><span>${money(m.total)}</span>
+         <b class="mono">${esc(m.code)}${m.seller ? `<span class="muted small"> · ${esc(m.seller)}</span>` : ''}</b><span>${money(m.total)}</span>
          <span class="muted small">${new Date(m.at).toLocaleDateString('en-IN')}</span></button>`).join('')}</div>`;
     $('recent').addEventListener('click', e => {
       const b = e.target.closest('.recent'); if (!b) return;

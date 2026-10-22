@@ -1,6 +1,7 @@
 // Shop grid — loads live cars from the database.
 (async function () {
-  const { sb, esc, money, cover, errMsg } = window.MHC;
+  const { sb, esc, money, cover, errMsg, getSellers } = window.MHC;
+  let sellers = [];
   const grid = document.getElementById('productGrid');
   const chips = document.getElementById('brandChips');
   const subChips = document.getElementById('typeChips');
@@ -27,6 +28,7 @@
       .order('created_at', { ascending: false });
     if (error) throw error;
     all = data || [];
+    sellers = await getSellers();
   } catch (e) {
     grid.innerHTML = `<p class="empty">Couldn't load cars right now. ${esc(errMsg(e))}</p>`;
     return;
@@ -85,6 +87,7 @@
           <span class="card-brand">${esc(p.brand)}</span>
           <span class="card-title">${esc(p.name)}</span>
           ${p.series ? `<span class="card-series">${esc(p.series)}</span>` : ''}
+          ${sellers.length > 1 ? `<span class="card-seller">by ${esc((sellers.find(x => x.id === p.seller_id) || {}).shop_name || 'MHC Diecast')}</span>` : ''}
           <div class="price-row">
             <span class="price">${money(p.price)}</span>
             ${off ? `<span class="mrp">${money(p.mrp)}</span><span class="off">${off}% off</span>` : ''}
