@@ -23,11 +23,21 @@ One **master admin** (you) plus up to **5 sellers**. Each seller logs in at `mhc
 2. Upload the website files to GitHub.
 3. Log in to admin → **My shop** → check your WhatsApp, UPI and shipping → Save.
 
-## Adding a seller (repeat for each)
-1. Supabase → **Authentication → Users → Add user** → their email + a password → tick **Auto Confirm User**.
-2. Admin → **Sellers → + Add seller** → shop name, WhatsApp number, and the same email → Save.
-3. Send the seller: the link `mhcdiecast.com/admin.html`, their email and password.
-4. They open **My shop**, fill in their **UPI ID** (required before buyers can pay them), then add cars.
+## Seller logins & passwords
+- Run `supabase/phase9-seller-logins.sql` once — it creates logins for the 5 sellers
+  (sharmaprateek.dev@gmail.com, harish@mhc.com, omkar@mhc.com, seller1@mhc.com, seller2@mhc.com)
+  with the **default password `abcd`**, plus an empty shop for each.
+- Send each seller: `mhcdiecast.com/admin.html`, their email, and `abcd`.
+- **First login:** they must set their own password (8+ characters, not `abcd`) — until then they can't see or change anything.
+  Next they must add their **WhatsApp number and UPI ID**; only then do the Orders and Cars tabs open.
+- Logins work from any device. The login is kept only until the browser is closed (not saved on the device).
+- **Change password anytime:** My shop → Change password.
+- **Forgot password:** you (master) open Sellers → the seller → **Reset password** → it goes back to `abcd` and they set a new one at next login.
+  Sellers with a real inbox (e.g. the Gmail one) can also use *Forgot password? → Email me a reset link* on the login screen.
+  The `@mhc.com` addresses can't receive email, so for them use Reset password.
+- **New seller later:** Sellers → + Add seller → shop name + email → Save. The login is created with `abcd` automatically — no Supabase step.
+- Sellers tab shows **"On default password"** next to anyone who hasn't set their own yet.
+- To change the default password: edit `default_seller_password()` at the top of the SQL file (and `DEFAULT_SELLER_PASSWORD` in `assets/js/config.js`), re-run the SQL.
 
 ## Pausing or removing a seller
 - **Edit → untick Active**: their cars disappear from the shop and they can't log in. Tick again to restore.

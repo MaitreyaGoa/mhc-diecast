@@ -23,10 +23,36 @@
     <div class="field"><label for="email">Email</label>
       <input class="input" id="email" type="email" autocomplete="username" required></div>
     <div class="field"><label for="password">Password</label>
-      <input class="input" id="password" type="password" autocomplete="current-password" required></div>
+      <input class="input" id="password" type="password" autocomplete="off" required></div>
     <p class="form-error" id="loginError" hidden></p>
     <button class="btn btn-primary btn-block" id="loginBtn" type="submit">Log in</button>
-    <a href="index.html" class="link-btn back-link">← Back to shop</a>
+    <div class="login-links">
+      <button type="button" class="link-btn" id="forgotBtn">Forgot password?</button>
+      <a href="index.html" class="link-btn">← Back to shop</a>
+    </div>
+    <div class="forgot-box" id="forgotBox" hidden>
+      <p class="small">Ask the store admin to <b>reset your password</b> — you'll get the default password and set a new one when you log in.</p>
+      <p class="small muted">If your login email has a real inbox, you can also get a reset link:</p>
+      <button type="button" class="btn btn-ghost btn-block" id="sendResetBtn">Email me a reset link</button>
+    </div>
+    <p class="muted small login-note">You stay logged in only until you close the browser.</p>
+  </form>
+</section>
+
+<!-- ================= SET PASSWORD (first login / reset link) ================= -->
+<section id="pwView" class="login-wrap" hidden>
+  <form id="pwForm" class="panel login-card" novalidate>
+    <div class="logo"><img class="logo-img" data-logo src="assets/img/logo-192.png" alt="" width="52" height="52"><span>MHC <span class="accent">Admin</span></span></div>
+    <h2 class="panel-title" id="pwTitle">Set your own password</h2>
+    <p class="small muted" id="pwLead">You're using the default password. Choose a new one to continue — you'll use it to log in from any device.</p>
+    <div class="field"><label for="pwNew">New password</label>
+      <input class="input" id="pwNew" type="password" autocomplete="new-password" minlength="8" required></div>
+    <div class="field"><label for="pwNew2">Repeat new password</label>
+      <input class="input" id="pwNew2" type="password" autocomplete="new-password" required></div>
+    <p class="small muted">At least 8 characters. Don't reuse the default password.</p>
+    <p class="form-error" id="pwError" hidden></p>
+    <button class="btn btn-primary btn-block" id="pwBtn" type="submit">Save password &amp; continue</button>
+    <button type="button" class="link-btn back-link" id="pwLogout">Log out</button>
   </form>
 </section>
 
@@ -74,6 +100,7 @@
 
     <!-- MY SHOP (every seller, incl. master) -->
     <section id="tab-shop" class="a-section" hidden>
+      <div class="notice setup-note" id="setupNote" hidden><b>Welcome!</b> Add your <b>WhatsApp number</b> and <b>UPI ID</b> and save — then you can add cars and receive orders.</div>
       <form id="shopForm" class="panel" novalidate>
         <h2 class="panel-title">My shop &amp; payment</h2>
         <p class="muted small">Buyers see your shop name and WhatsApp on your cars, and pay your UPI directly at checkout.</p>
@@ -122,9 +149,10 @@
       <div class="panel a-help">
         <h2 class="panel-title">Adding a seller</h2>
         <ol>
-          <li>Supabase → <b>Authentication → Users → Add user</b>: their email + a password, tick <b>Auto Confirm User</b>.</li>
-          <li>Here: <b>+ Add seller</b> → shop name, WhatsApp and that same email.</li>
-          <li>Send them the link <b>mhcdiecast.com/admin.html</b> with their email and password.</li>
+          <li><b>+ Add seller</b> → shop name and their login email → Save. Their login is created with the <b>default password</b>.</li>
+          <li>Send them <b>mhcdiecast.com/admin.html</b>, their email and the default password.</li>
+          <li>On first login they set their own password, then fill in their WhatsApp and UPI before they can add cars.</li>
+          <li>Forgot password? Open the seller → <b>Reset password</b>. They log in with the default password and set a new one.</li>
         </ol>
       </div>
     </section>
@@ -212,11 +240,15 @@
     <h2 class="panel-title" id="sellerDialogTitle">Add seller</h2>
     <div class="two">
       <div class="field"><label for="d_shop_name">Shop name *</label><input class="input" id="d_shop_name" required></div>
-      <div class="field"><label for="d_whatsapp">WhatsApp number *</label><input class="input" id="d_whatsapp" inputmode="numeric" maxlength="13" required></div>
+      <div class="field"><label for="d_whatsapp">WhatsApp number</label><input class="input" id="d_whatsapp" inputmode="numeric" maxlength="13" placeholder="Seller can add it"></div>
     </div>
     <div class="field"><label for="d_email">Login email</label>
-      <input class="input" id="d_email" type="email" autocapitalize="off" placeholder="Same email you created in Supabase → Authentication">
-      <span class="muted small">Leave empty to link later. Clear it to remove their access.</span></div>
+      <input class="input" id="d_email" type="email" autocapitalize="off" placeholder="seller@email.com — login is created for you">
+      <span class="muted small">New logins start with the default password. Clear the email to remove their access.</span></div>
+    <div class="pw-row" id="pwRow" hidden>
+      <span class="small" id="pwState"></span>
+      <button type="button" class="btn btn-ghost sm" id="resetPwBtn">Reset password</button>
+    </div>
     <div class="two">
       <div class="field"><label for="d_upi_id">UPI ID</label><input class="input" id="d_upi_id" autocapitalize="off" placeholder="They can fill this in themselves"></div>
       <div class="field"><label for="d_payee_name">Payee name</label><input class="input" id="d_payee_name"></div>
