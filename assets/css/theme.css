@@ -655,3 +655,49 @@ body { background-attachment: scroll; }
 .done-order .order-code { margin: 0; }
 .done-seller { font-weight: 600; }
 .done-order .btn { padding: 9px 16px; font-size: 14px; }
+
+/* =====================================================================
+   Buyer accounts — header button, Google button, account page
+   ===================================================================== */
+.acct-btn { width: 36px; height: 36px; padding: 0 !important; border-radius: 50% !important; display: grid !important; place-items: center; overflow: hidden; color: #424245; }
+.acct-btn img { width: 100%; height: 100%; object-fit: cover; }
+.acct-btn.signed-in { box-shadow: 0 0 0 2px var(--red); }
+.acct-initial { width: 100%; height: 100%; display: grid; place-items: center; background: var(--red); color: #fff; font-weight: 700; font-size: 15px; }
+:root[data-theme="dark"] .acct-btn { color: #C7C7CC; }
+.btn-google { background: #fff; color: #1F1F1F; box-shadow: 0 0 0 1px #DADCE0 inset, 0 1px 2px rgba(0,0,0,.06); font-weight: 600; gap: 10px; }
+.btn-google:hover { background: #F8F9FA; }
+:root[data-theme="dark"] .btn-google { background: #fff; color: #1F1F1F; }
+.signin-card { text-align: center; padding: 36px 24px; }
+.signin-card h2 { font-size: 24px; letter-spacing: -.03em; margin: 8px 0 6px; }
+.signin-card p { color: var(--muted); max-width: 30em; margin: 0 auto 20px; }
+.signin-card .btn-google { min-width: 260px; }
+.signin-card .fine { font-size: 12.5px; margin: 16px auto 0; }
+.signin-card .fine a { text-decoration: underline; }
+.signin-ico { width: 64px; height: 64px; margin: 0 auto; filter: drop-shadow(0 10px 18px rgba(0,0,0,.15)); }
+.check { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 500; cursor: pointer; margin: 2px 0 16px; }
+.check input { width: 18px; height: 18px; accent-color: var(--red); }
+.signed-as { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm); background: rgba(0,0,0,.035); margin-bottom: 16px; font-size: 14px; }
+.signed-as img, .signed-as .acct-initial { width: 30px; height: 30px; border-radius: 50%; flex: none; }
+:root[data-theme="dark"] .signed-as { background: rgba(255,255,255,.06); }
+.account-head { display: flex; align-items: center; gap: 16px; }
+.account-head .avatar { width: 64px; height: 64px; border-radius: 50%; overflow: hidden; flex: none; box-shadow: 0 0 0 3px #fff, 0 8px 20px -8px rgba(0,0,0,.4); }
+.account-head .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.account-head .avatar .acct-initial { font-size: 26px; }
+.account-head h2 { margin: 0; font-size: 22px; letter-spacing: -.025em; }
+.acct-tabs { margin: 18px 0; }
+.addr { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line-soft); font-size: 14.5px; }
+.addr:last-child { border-bottom: 0; }
+.addr-actions { display: flex; gap: 14px; align-items: start; }
+.my-order + .my-order { margin-top: 14px; }
+.my-order .order-head { margin-bottom: 6px; }
+.danger-zone { border: 1px solid rgba(196,22,28,.25); }
+.link-btn.danger { color: var(--bad); }
+.signed-cta { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+.signed-cta .btn-google { padding: 10px 18px; }
+.logo span { white-space: nowrap; }
+.my-order .status, .order-card .status { text-transform: none; }
+@media (max-width: 420px) {
+  .nav-links a.hide-xs { display: none; }
+  .nav { gap: 6px; }
+  .nav-links { gap: 0; }
+}
