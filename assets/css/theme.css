@@ -625,3 +625,33 @@ body { background-attachment: scroll; }
 .btn-fb { background: linear-gradient(180deg, #2D88FF, #1877F2); color: #fff; box-shadow: 0 8px 20px -10px rgba(24,119,242,.6); }
 .btn-fb:hover { filter: brightness(1.06); }
 :root[data-theme="dark"] .fb-ico { color: #4C9BFF; }
+
+/* ---------- sellers on the shop ---------- */
+.card-seller { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.seller-box { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding: 14px 16px;
+  border-radius: var(--radius-md); background: #fff; box-shadow: var(--shadow-1), 0 0 0 .5px rgba(0,0,0,.06); }
+.seller-box > div { display: grid; gap: 1px; }
+.seller-box b { font-size: 16px; letter-spacing: -.01em; }
+.seller-box .btn { padding: 10px 16px; font-size: 14px; }
+:root[data-theme="dark"] .seller-box { background: rgba(22,23,28,.85); }
+.cart-seller { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 12px 0 8px; margin-top: 8px; border-bottom: 1px solid var(--line-soft); font-size: 14.5px; }
+.cart-seller:first-child { margin-top: 0; padding-top: 0; }
+.cart-seller + .cart-row { padding-top: 16px; }
+
+/* ---------- checkout: one payment per seller ---------- */
+.pay-intro .notice { margin-bottom: 14px; }
+.pay-card + .pay-card { margin-top: 16px; }
+.pay-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.pay-head .panel-title { margin-bottom: 8px; }
+.pay-items { margin: -2px 0 16px; }
+.pay-card.is-placed { opacity: .75; }
+.pay-card.is-placed .qr-wrap, .pay-card.is-placed .pay-steps { display: none; }
+#payForm > .btn-block { margin-top: 18px; }
+.sum-seller { font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 10px 0 2px; }
+.sum-seller:first-child { margin-top: 0; }
+#doneCodes { display: grid; gap: 14px; justify-items: center; margin: 4px 0 10px; }
+.done-order { display: grid; gap: 6px; justify-items: center; }
+.done-order .order-code { margin: 0; }
+.done-seller { font-weight: 600; }
+.done-order .btn { padding: 9px 16px; font-size: 14px; }
