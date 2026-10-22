@@ -24,15 +24,21 @@
 
   <div class="cart-layout">
     <div>
+      <!-- Sign in (shown when signed out) -->
+      <section id="signinBox" class="panel signin-card" hidden></section>
+
       <!-- STEP 1: delivery details -->
       <form id="detailsForm" class="panel" novalidate>
         <h2 class="panel-title">Delivery details</h2>
+        <div class="signed-as" id="signedAs" hidden></div>
+        <div class="field" id="addrPick" hidden><label for="addrSelect">Deliver to</label>
+          <select class="input" id="addrSelect"></select></div>
         <div class="field"><label for="name">Full name *</label>
           <input class="input" id="name" autocomplete="name" required></div>
         <div class="two">
           <div class="field"><label for="phone">Mobile number *</label>
             <input class="input" id="phone" type="tel" inputmode="numeric" maxlength="10" autocomplete="tel-national" placeholder="10-digit number" required></div>
-          <div class="field"><label for="email">Email (optional)</label>
+          <div class="field"><label for="email">Email (from Google)</label>
             <input class="input" id="email" type="email" autocomplete="email"></div>
         </div>
         <div class="field"><label for="address">Address *</label>
@@ -45,6 +51,7 @@
           <div class="field"><label for="state">State</label>
             <input class="input" id="state" autocomplete="address-level1"></div>
         </div>
+        <label class="check" id="saveAddrRow"><input type="checkbox" id="saveAddr" checked> Save this address to my account</label>
         <div id="shipHint" class="ship-hint" hidden></div>
         <p class="form-error" id="detailsError" hidden></p>
         <button class="btn btn-primary btn-block" type="submit" id="toPay">Continue to payment</button>
