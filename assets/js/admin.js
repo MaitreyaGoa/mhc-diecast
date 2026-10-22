@@ -4,8 +4,11 @@
 (function () {
   const { C, esc, money, placeholder, toast } = window.MHC;
   const sb = window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, storageKey: 'mhc-admin-auth' }
+    // Login lasts only while the browser is open (sessionStorage), never saved long-term
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true,
+            storage: window.sessionStorage, storageKey: 'mhc-admin-auth' }
   });
+  try { localStorage.removeItem('mhc-admin-auth'); } catch (e) {}   // remove logins saved by older versions
   const $ = id => document.getElementById(id);
   const SITE = location.origin + location.pathname.replace(/admin\.html$/, '');
   const STATUSES = ['pending', 'confirmed', 'shipped', 'delivered', 'rejected', 'cancelled'];
@@ -33,10 +36,50 @@
   }
   async function boot() {
     const { data } = await sb.auth.getSession();
-    if (data.session && await loadProfile()) showApp();
+    if (recoveryMode) { if (data.session) showPwView('recovery'); else showLogin(); return; }
+    if (data.session && await loadProfile()) mustChange() ? showPwView('first') : showApp();
     else { if (data.session) await sb.auth.signOut(); showLogin(); }
   }
+  const mustChange = () => !!(state.me && state.me.must_change_password && !isMaster());
+  let recoveryMode = false;
+  function showPwView(mode) {
+    recoveryMode = mode === 'recovery';
+    $('appView').hidden = true; $('loginView').hidden = true; $('pwView').hidden = false;
+    $('pwTitle').textContent = recoveryMode ? 'Choose a new password' : 'Set your own password';
+    $('pwLead').textContent = recoveryMode
+      ? 'Enter a new password for your account.'
+      : "You're using the default password. Choose a new one to continue — you'll use it to log in from any device.";
+    $('pwError').hidden = true; $('pwNew').value = ''; $('pwNew2').value = '';
+    $('pwNew').focus();
+  }
+  async function setPassword(pw) {
+    const { error } = await sb.rpc('set_my_password', { p_new: pw });
+    if (!error) return null;
+    if (/function .*set_my_password|does not exist|schema cache/i.test(error.message || '')) {
+      const r = await sb.auth.updateUser({ password: pw });          // before phase9 is installed
+      return r.error;
+    }
+    return error;
+  }
+  $('pwForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const a1 = $('pwNew').value, a2 = $('pwNew2').value, err = $('pwError');
+    const show = m => { err.textContent = m; err.hidden = false; };
+    if (a1.length < 8) return show('Use at least 8 characters.');
+    if (a1 !== a2) return show('The two passwords don\'t match.');
+    if (a1.toLowerCase() === String(C.DEFAULT_SELLER_PASSWORD || 'abcd').toLowerCase()) return show('Choose a password different from the default.');
+    const btn = $('pwBtn'); btn.disabled = true; btn.textContent = 'Saving…';
+    const error = await setPassword(a1);
+    btn.disabled = false; btn.textContent = 'Save password & continue';
+    if (error) return show(errText(error));
+    $('pwView').hidden = true;
+    toast('Password saved', 'ok');
+    if (await loadProfile()) showApp(); else showLogin();
+  });
+  $('pwLogout').onclick = async () => { await sb.auth.signOut(); $('pwView').hidden = true; showLogin(); };
+
   function showLogin() {
+    $('pwView').hidden = true;
     $('appView').hidden = true; $('loginView').hidden = false;
     clearInterval(state.poll);
     $('email').focus();
@@ -46,12 +89,25 @@
     $('roleLabel').textContent = isMaster() ? 'Master admin' : (state.me ? state.me.shop_name : '');
     document.body.classList.toggle('is-seller', !isMaster());
   }
+  const shopIncomplete = () => !isMaster() && state.me && (!state.me.whatsapp || !state.me.upi_id);
+  function applySetupGate() {
+    const gate = shopIncomplete();
+    document.querySelectorAll('.a-tab').forEach(t => {
+      if (t.dataset.tab !== 'shop') t.disabled = gate;
+    });
+    $('setupNote').hidden = !gate;
+    if (gate) {
+      document.querySelectorAll('.a-tab').forEach(x => x.classList.toggle('active', x.dataset.tab === 'shop'));
+      document.querySelectorAll('.a-section').forEach(s => { s.hidden = s.id !== 'tab-shop'; });
+    }
+  }
   async function showApp() {
-    $('loginView').hidden = true; $('appView').hidden = false;
+    $('loginView').hidden = true; $('pwView').hidden = true; $('appView').hidden = false;
     applyRole();
     await loadSellers();
     loadOrders(); loadProducts(); loadShop();
     if (isMaster()) loadSettings();
+    applySetupGate();
     if (!state.me) $('shopError').textContent = isMaster()
       ? 'Run supabase/phase7-sellers.sql in Supabase to set up your shop and sellers.' : '';
     $('shopError').hidden = !!state.me;
@@ -64,7 +120,7 @@
     const btn = $('loginBtn'), err = $('loginError');
     err.hidden = true; btn.disabled = true; btn.textContent = 'Logging in…';
     const { error } = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
-    if (!error && await loadProfile()) { $('password').value = ''; showApp(); }
+    if (!error && await loadProfile()) { $('password').value = ''; mustChange() ? showPwView('first') : showApp(); }
     else {
       if (!error) await sb.auth.signOut();
       err.textContent = error ? 'Wrong email or password.' : 'This account has no shop access yet, or it is paused. Contact the store admin.';
@@ -73,6 +129,16 @@
     btn.disabled = false; btn.textContent = 'Log in';
   });
   $('logoutBtn').onclick = async () => { await sb.auth.signOut(); showLogin(); };
+  $('forgotBtn').onclick = () => { $('forgotBox').hidden = !$('forgotBox').hidden; };
+  $('sendResetBtn').onclick = async () => {
+    const email = $('email').value.trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) { toast('Type your login email above first', 'warn'); $('email').focus(); return; }
+    const btn = $('sendResetBtn'); btn.disabled = true;
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+    btn.disabled = false;
+    if (error) return toast(errText(error), 'warn');
+    toast('If that email has an account, a reset link is on its way. Check spam too.', 'ok');
+  };
 
   // ------------------------------------------------------------------ SELLERS (data)
   const sellerName = id => { const s = state.sellers.find(x => x.id === id); return s ? s.shop_name : 'No seller'; };
@@ -93,7 +159,7 @@
 
   // ------------------------------------------------------------------ TABS
   $('tabs').addEventListener('click', e => {
-    const t = e.target.closest('.a-tab'); if (!t) return;
+    const t = e.target.closest('.a-tab'); if (!t || t.disabled) return;
     document.querySelectorAll('.a-tab').forEach(x => x.classList.toggle('active', x === t));
     document.querySelectorAll('.a-section').forEach(s => { s.hidden = s.id !== 'tab-' + t.dataset.tab; });
     window.scrollTo(0, 0);
@@ -552,6 +618,9 @@
     const { data } = await sb.rpc('my_profile');
     if (data && data.seller) state.me = data.seller;
     await loadSellers(); applyRole(); loadShop();
+    const wasGated = document.querySelector('.a-tab[disabled]');
+    applySetupGate();
+    if (wasGated && !shopIncomplete()) { toast('Shop ready — you can add cars now 🏁', 'ok'); loadOrders(); loadProducts(); }
   }
   $('shopForm').addEventListener('submit', async e => {
     e.preventDefault();
@@ -608,10 +677,10 @@
       <div class="a-seller${s.is_active ? '' : ' hidden-prod'}" data-id="${esc(s.id)}">
         <div class="a-seller-info">
           <b>${esc(s.shop_name)}${s.user_id === state.uid ? ' <span class="pill cat">You</span>' : ''}${s.is_active ? '' : ' <span class="pill bad">Paused</span>'}</b>
-          <span class="small">💬 <a href="https://wa.me/91${esc(s.whatsapp)}" target="_blank" rel="noopener">${esc(s.whatsapp)}</a>
+          <span class="small">${s.whatsapp ? `💬 <a href="https://wa.me/91${esc(s.whatsapp)}" target="_blank" rel="noopener">${esc(s.whatsapp)}</a>` : '<span class="bad">No WhatsApp yet</span>'}
             · ${s.upi_id ? 'UPI ' + esc(s.upi_id) : '<span class="bad">No UPI yet</span>'}
             · Outside Goa ${money(s.outside_goa_shipping)}</span>
-          <span class="small muted">${s.login_email ? '🔑 ' + esc(s.login_email) : '<span class="warn">No login linked</span>'}
+          <span class="small muted">${s.login_email ? '🔑 ' + esc(s.login_email) + (s.must_change_password ? ' <span class="pill warn">On default password</span>' : '') : '<span class="warn">No login linked</span>'}
             · ${nCars[s.id] || 0} cars · ${nPend[s.id] || 0} pending orders</span>
         </div>
         <button class="btn btn-ghost sm" data-act="edit-seller">Edit</button>
@@ -619,6 +688,15 @@
       : '<p class="empty">Run supabase/phase7-sellers.sql first, then add sellers here.</p>';
   }
   $('addSeller').onclick = () => openSeller(null);
+  $('resetPwBtn').onclick = async () => {
+    const s = editingSeller; if (!s) return;
+    if (!confirm(`Reset ${s.shop_name}'s password to the default (${C.DEFAULT_SELLER_PASSWORD || 'abcd'})?\nThey'll set a new one at their next login.`)) return;
+    const { error } = await sb.rpc('admin_reset_seller_password', { p_seller: s.id });
+    if (error) return toast(errText(error), 'warn');
+    toast('Password reset — send them the default password', 'ok');
+    $('sellerDialog').close();
+    loadSellers();
+  };
   $('sellerList').addEventListener('click', e => {
     const b = e.target.closest('[data-act="edit-seller"]'); if (!b) return;
     openSeller(state.sellers.find(s => s.id === b.closest('.a-seller').dataset.id));
@@ -635,6 +713,10 @@
     $('d_outside_goa_shipping').value = s ? s.outside_goa_shipping : 100;
     $('d_active').checked = s ? s.is_active : true;
     $('d_active').disabled = !!(s && s.user_id === state.uid);   // can't pause yourself
+    $('pwRow').hidden = !(s && s.user_id && s.user_id !== state.uid);
+    if (s) $('pwState').textContent = s.must_change_password
+      ? 'On the default password — they set their own at next login.'
+      : 'Using their own password.';
     $('sellerError').hidden = true;
     $('sellerDialog').showModal();
   }
@@ -652,7 +734,8 @@
     };
     const email = $('d_email').value.trim().toLowerCase();
     if (!row.shop_name) return show('Enter the shop name.', 'd_shop_name');
-    if (!validWa(row.whatsapp)) return show('Enter a valid 10-digit WhatsApp number.', 'd_whatsapp');
+    if (row.whatsapp && !validWa(row.whatsapp)) return show('Enter a valid 10-digit WhatsApp number.', 'd_whatsapp');
+    if (!row.whatsapp) row.whatsapp = null;
     if (row.upi_id && !validUpi(row.upi_id)) return show('UPI ID looks wrong (e.g. name@okicici).', 'd_upi_id');
     if (email && !/^\S+@\S+\.\S+$/.test(email)) return show('Check the login email.', 'd_email');
     const btn = $('saveSeller'); btn.disabled = true;
@@ -671,8 +754,12 @@
       }
       const oldEmail = editingSeller ? (editingSeller.login_email || '') : '';
       if (email && email !== oldEmail) {
-        const { error } = await sb.rpc('admin_link_seller', { p_seller: id, p_email: email });
+        let { data: how, error } = await sb.rpc('admin_create_seller_login', { p_seller: id, p_email: email });
+        if (error && /admin_create_seller_login|schema cache|does not exist/i.test(error.message || '')) {
+          ({ error } = await sb.rpc('admin_link_seller', { p_seller: id, p_email: email }));   // before phase9
+        }
         if (error) throw error;
+        if (how === 'created') setTimeout(() => alert(`Login created for ${email}.\n\nDefault password: ${C.DEFAULT_SELLER_PASSWORD || 'abcd'}\nThey'll be asked to set their own password at first login.`), 300);
       } else if (!email && oldEmail && !(editingSeller.user_id === state.uid)) {
         const { error } = await sb.from('sellers').update({ user_id: null, login_email: null }).eq('id', id);
         if (error) throw error;
@@ -689,12 +776,17 @@
     const a = $('newPass').value, b = $('newPass2').value;
     if (a.length < 8) { toast('Use at least 8 characters', 'warn'); return; }
     if (a !== b) { toast('Passwords do not match', 'warn'); return; }
-    const { error } = await sb.auth.updateUser({ password: a });
+    if (a.toLowerCase() === String(C.DEFAULT_SELLER_PASSWORD || 'abcd').toLowerCase()) { toast('Choose a password different from the default', 'warn'); return; }
+    const error = await setPassword(a);
     if (error) { toast(errText(error), 'warn'); return; }
     $('newPass').value = $('newPass2').value = '';
     toast('Password updated', 'ok');
   });
 
-  sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') showLogin(); });
+  sb.auth.onAuthStateChange(ev => {
+    if (ev === 'SIGNED_OUT') showLogin();
+    if (ev === 'PASSWORD_RECOVERY') showPwView('recovery');
+  });
+  if (/type=recovery/.test(location.hash)) recoveryMode = true;
   boot();
 })();

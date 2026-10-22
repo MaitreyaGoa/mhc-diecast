@@ -24,6 +24,10 @@ window.MHC_CONFIG = {
   FOUNDER_URL:    'https://www.facebook.com/MaitreyaHinde/',
   DESIGNER_NAME:  'MHC Digital',
   DESIGNER_URL:   'https://www.facebook.com/MHCdigital/',
+  // Shown to the master when creating/resetting seller logins — keep in sync with
+  // default_seller_password() in supabase/phase9-seller-logins.sql
+  DEFAULT_SELLER_PASSWORD: 'abcd',
+
   CURRENCY:   '₹',
   GOA_PINCODE_PREFIX: '403'      // free shipping for these pincodes
 };
