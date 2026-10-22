@@ -1,12 +1,14 @@
 // =====================================================================
 //  MHC Diecast — shared code for every customer page
-//  (Supabase client, cart, header/footer, small helpers)
+//  (Supabase client, Google sign-in, cart synced to the account,
+//   header/footer, small helpers)
 // =====================================================================
 (function () {
   const C = window.MHC_CONFIG || {};
   const sb = window.supabase
     ? window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY, {
-        auth: { persistSession: false, autoRefreshToken: false }
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true,
+                flowType: 'pkce', storageKey: 'mhc-buyer-auth' }
       })
     : null;
 
@@ -51,7 +53,7 @@
   const CART_KEY = 'mhc_cart_v1';
   const Cart = {
     items() { return store.get(CART_KEY, []); },
-    save(items) { store.set(CART_KEY, items); updateCartCount(); },
+    save(items) { store.set(CART_KEY, items); updateCartCount(); queueCartPush(); },
     count() { return this.items().reduce((n, i) => n + i.qty, 0); },
     subtotal() { return this.items().reduce((s, i) => s + i.price * i.qty, 0); },
     add(p, qty = 1) {
@@ -95,6 +97,125 @@
       return notes;
     }
   };
+
+  // =================================================================
+  //  BUYER ACCOUNTS — Sign in with Google, cart saved to the account
+  // =================================================================
+  const OWNER_KEY = 'mhc_cart_owner';      // whose cart is in this browser (null = guest)
+  const Auth = { user: null, profile: null, cartSync: false };
+  let pushChain = Promise.resolve(), applyingRemote = false;
+
+  function queueCartPush() {
+    if (!Auth.user || !Auth.cartSync || applyingRemote) return;
+    const items = Cart.items().map(i => ({ id: i.id, qty: i.qty }));
+    pushChain = pushChain.then(async () => {
+      const { error } = await sb.rpc('save_cart', { p_items: items });
+      if (error) console.warn('Cart not saved to account:', error.message);
+    }).catch(() => {});
+  }
+  const toCartItem = (p, qty) => ({ id: p.id, name: p.name, brand: p.brand, price: Number(p.price),
+    seller_id: p.seller_id || null, mrp: Number(p.mrp), image: (p.images && p.images[0]) || '',
+    stock: Math.max(0, p.stock || 0), qty: Math.max(1, Math.min(qty, Math.max(1, p.stock || 1))) });
+
+  async function pullCart() {
+    const { data, error } = await sb.from('cart_items').select('qty, product_id, products(*)').order('added_at');
+    if (error) throw error;
+    return (data || []).filter(r => r.products).map(r => toCartItem(r.products, r.qty));
+  }
+  function mergeCarts(a, b) {               // same car in both → keep the larger quantity
+    const out = a.map(i => ({ ...i }));
+    b.forEach(i => {
+      const f = out.find(x => x.id === i.id);
+      if (f) f.qty = Math.min(Math.max(f.qty, i.qty), f.stock || i.qty); else out.push({ ...i });
+    });
+    return out;
+  }
+  async function loadProfile() {
+    const u = Auth.user, m = u.user_metadata || {};
+    const fallback = { user_id: u.id, email: u.email, full_name: m.full_name || m.name || '',
+                       avatar_url: m.avatar_url || m.picture || null, phone: null };
+    try {
+      const { data, error } = await sb.from('profiles').select('*').eq('user_id', u.id).maybeSingle();
+      if (error) throw error;
+      if (data) { Auth.profile = data; return; }
+      const ins = await sb.from('profiles').insert(fallback).select('*').single();
+      Auth.profile = ins.error ? fallback : ins.data;
+    } catch (e) { Auth.profile = fallback; }
+  }
+  // Remove the one-time sign-in parameters from the address bar
+  function cleanAuthUrl() {
+    const u = new URL(location.href); let changed = false;
+    ['error', 'error_code', 'error_description'].forEach(k => { if (u.searchParams.has(k)) { u.searchParams.delete(k); changed = true; } });
+    if (u.searchParams.has('code') && !/^MHC-/i.test(u.searchParams.get('code'))) { u.searchParams.delete('code'); changed = true; }
+    if (changed) try { history.replaceState(null, '', u.pathname + (u.search || '') + u.hash); } catch (e) {}
+  }
+
+  const ready = (async () => {
+    if (!sb) return;
+    const q = new URLSearchParams(location.search);
+    const authError = q.get('error_description');
+    try {
+      const { data } = await sb.auth.getSession();
+      const session = data && data.session;
+      if (!session) {
+        // signed out on this device: don't leave the last person's cart behind
+        if (store.get(OWNER_KEY, null)) { store.set(OWNER_KEY, null); store.set(CART_KEY, []); }
+        return;
+      }
+      Auth.user = session.user;
+      await loadProfile();
+      const owner = store.get(OWNER_KEY, null);
+      let remote;
+      try { remote = await pullCart(); Auth.cartSync = true; }
+      catch (e) { Auth.cartSync = false; return; }   // accounts update not installed yet: keep the local cart
+      const next = owner === Auth.user.id ? remote : mergeCarts(remote, owner ? [] : Cart.items());
+      applyingRemote = true; Cart.save(next); applyingRemote = false;
+      store.set(OWNER_KEY, Auth.user.id);
+      if (owner !== Auth.user.id) queueCartPush();
+    } catch (e) {
+      console.warn('Sign-in check failed:', e);
+    } finally {
+      cleanAuthUrl();
+      updateAccountButton();
+      if (authError) setTimeout(() => toast('Sign-in didn\'t finish: ' + authError, 'warn'), 300);
+    }
+  })();
+
+  async function signIn(returnTo) {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: returnTo || location.href.split('#')[0], queryParams: { prompt: 'select_account' } }
+    });
+    if (error) toast('Couldn\'t open Google sign-in: ' + error.message, 'warn');
+  }
+  async function signOut() {
+    try { await pushChain; await sb.auth.signOut(); } catch (e) {}
+    store.set(CART_KEY, []); store.set(OWNER_KEY, null);
+    location.href = 'index.html';
+  }
+  const GOOGLE_G = '<svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+  const googleButton = (label = 'Continue with Google') =>
+    `<button type="button" class="btn btn-google" data-google-signin>${GOOGLE_G}<span>${esc(label)}</span></button>`;
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-google-signin]'); if (!b) return;
+    b.disabled = true; signIn(b.dataset.returnTo || null).finally(() => setTimeout(() => { b.disabled = false; }, 4000));
+  });
+
+  function updateAccountButton() {
+    const a = document.getElementById('acctBtn'); if (!a) return;
+    if (Auth.user) {
+      const p = Auth.profile || {}, name = p.full_name || Auth.user.email || '';
+      a.innerHTML = p.avatar_url
+        ? `<img src="${esc(p.avatar_url)}" alt="" referrerpolicy="no-referrer">`
+        : `<span class="acct-initial">${esc((name[0] || '?').toUpperCase())}</span>`;
+      a.setAttribute('aria-label', 'My account'); a.title = name;
+      a.classList.add('signed-in');
+    } else {
+      a.innerHTML = ACCT_ICON; a.setAttribute('aria-label', 'Sign in'); a.title = 'Sign in';
+      a.classList.remove('signed-in');
+    }
+  }
+  const ACCT_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="8.2" r="3.8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 20c.9-3.7 4-5.8 7.5-5.8s6.6 2.1 7.5 5.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
 
   // ---------- settings (UPI, shipping) ----------
   let settingsCache = null;
@@ -157,12 +278,13 @@
             <img class="logo-img" src="${LOGO}" alt="MHC Diecast logo" width="52" height="52"><span>MHC <span class="accent">Diecast</span></span>
           </a>
           <nav class="nav-links">
-            ${link('index.html', 'Shop')}
+            ${link('index.html', 'Shop', 'hide-xs')}
             ${link('track.html', 'Track order', 'hide-sm')}
             <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch dark mode">
               <svg class="i-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a.6.6 0 0 0-.8-.7A9.5 9.5 0 1 0 20.9 15.4a.6.6 0 0 0-.7-.8z"/></svg>
               <svg class="i-sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></g></svg>
             </button>
+            <a href="account.html" class="acct-btn ${page === 'account.html' ? 'active' : ''}" id="acctBtn" aria-label="Sign in">${ACCT_ICON}</a>
             <a href="cart.html" class="cart-btn ${page === 'cart.html' ? 'active' : ''}" aria-label="Cart">🛒
               <span class="cart-count" id="cartCount" hidden>0</span></a>
           </nav>
@@ -191,6 +313,7 @@
           </div>
           <div class="footer-col">
             <h4>Help</h4>
+            <a href="account.html">My account</a>
             <a href="track.html">Track order</a>
             <a href="shipping.html">Shipping & returns</a>
             <a href="contact.html">Contact</a>
@@ -212,7 +335,7 @@
           <span>Founder: ${C.FOUNDER_URL ? `<a class="fb-inline" href="${esc(C.FOUNDER_URL)}" target="_blank" rel="noopener" title="Maitreya Hinde on Facebook">${FB}${esc(C.FOUNDER_NAME)}</a>` : esc(C.FOUNDER_NAME || '')}</span>
           <span>Developed by ${C.DESIGNER_URL ? `<a class="fb-inline" href="${esc(C.DESIGNER_URL)}" target="_blank" rel="noopener" title="MHC Digital on Facebook">${FB}${esc(C.DESIGNER_NAME)}</a>` : esc(C.DESIGNER_NAME || '')}</span>
         </div>
-        <div class="container footer-legal">© ${new Date().getFullYear()} ${esc(C.STORE_NAME)}, ${esc(C.STORE_LOCATION || 'Goa')}. Hot Wheels and other brand names are trademarks of their owners; we are an independent seller.</div>
+        <div class="container footer-legal">© ${new Date().getFullYear()} ${esc(C.STORE_NAME)}, ${esc(C.STORE_LOCATION || 'Goa')}. Hot Wheels and other brand names are trademarks of their owners; we are an independent seller. · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></div>
       </footer>`;
     updateCartCount();
     if (page !== 'checkout.html' && page !== 'admin.html') addWhatsAppButton();
@@ -328,8 +451,9 @@
   }
 
   initTheme();
-  document.addEventListener('DOMContentLoaded', () => { addScene(); renderChrome(); fillLogos(); enableTilt(); applyTheme(currentTheme(), false); });
+  document.addEventListener('DOMContentLoaded', () => { addScene(); renderChrome(); fillLogos(); enableTilt(); applyTheme(currentTheme(), false); updateAccountButton(); });
 
   window.MHC = { C, sb, store, money, esc, param, isGoa, placeholder, cover, Cart,
+                 Auth, ready, signIn, signOut, googleButton,
                  getSettings, getSellers, sellerFor, shippingFor, waLink, toast, errMsg, updateCartCount };
 })();

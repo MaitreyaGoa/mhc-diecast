@@ -231,7 +231,7 @@
   }
 
   function waMessage(o, status) {
-    const track = `${SITE}track.html?code=${encodeURIComponent(o.order_code)}&phone=${o.phone}`;
+    const track = `${SITE}track.html?order=${encodeURIComponent(o.order_code)}&phone=${o.phone}`;
     const name = o.customer_name.split(' ')[0];
     return {
       pending:   `Hi ${name}, we've received your order ${o.order_code} (${money(o.total)}). We're verifying your payment and will confirm shortly.`,

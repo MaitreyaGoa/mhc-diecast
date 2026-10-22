@@ -1,5 +1,6 @@
 // Cart page — edit quantities, then go to checkout.
 (async function () {
+  await window.MHC.ready;   // signed-in buyer's saved cart is loaded first
   const { esc, money, cover, Cart, getSettings, getSellers, sellerFor, errMsg } = window.MHC;
   let sellers = [], settings = null;
   const itemsBox = document.getElementById('cartItems');

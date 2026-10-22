@@ -63,6 +63,7 @@
     const { error } = await sb.rpc('place_order',
       { p_customer: {}, p_items: [], p_screenshot_path: '', p_utr: null });
     if (error && /enter your name/i.test(error.message)) return ['ok', 'Validation working.'];
+    if (error && /sign in/i.test(error.message)) return ['ok', 'Working — orders require Google sign-in.'];
     if (error) throw error;
     return ['bad', 'Function accepted an empty order — re-run schema.sql.'];
   });
@@ -73,6 +74,12 @@
     const noUpi = (data || []).filter(s => !s.upi_id).map(s => s.shop_name);
     return noUpi.length ? ['warn', `${data.length} active seller(s). Missing UPI: ${noUpi.join(', ')}`]
                         : ['ok', `${data.length} active seller(s): ${data.map(s => s.shop_name).join(', ')}`];
+  });
+
+  await check('Buyer accounts update installed', async () => {
+    const { error } = await sb.from('cart_items').select('product_id', { count: 'exact', head: true });
+    return error ? ['warn', 'Not yet — run supabase/phase8-buyers.sql for Google sign-in and saved carts.']
+                 : ['ok', 'Saved carts, addresses and profiles are ready.'];
   });
 
   await check('Payment screenshots are private', async () => {

@@ -1,6 +1,7 @@
 // Order tracking — buyer enters order code + mobile number.
-(function () {
-  const { sb, esc, money, cover, param, store, getSettings, waLink, errMsg } = window.MHC;
+(async function () {
+  await window.MHC.ready;
+  const { sb, esc, money, cover, param, store, getSettings, waLink, errMsg, Auth, googleButton } = window.MHC;
   const $ = id => document.getElementById(id);
   const STEPS = ['pending', 'confirmed', 'shipped', 'delivered'];
   const LABEL = { pending: 'Payment being verified', confirmed: 'Confirmed — packing',
@@ -64,10 +65,19 @@
     lookup($('code').value.trim().toUpperCase(), $('phone').value.trim());
   });
 
-  // Orders placed from this phone/browser
-  const mine = store.get('mhc_orders_v1', []);
+  // Signed in: all orders live in My account. Signed out: orders placed from this browser.
+  const mine = Auth.user ? [] : store.get('mhc_orders_v1', []);
+  if (Auth.user) {
+    $('recent').innerHTML = `<div class="panel signed-cta"><div><b>All your orders are in My account</b>
+      <div class="muted small">Status, tracking numbers and seller contacts — on any device.</div></div>
+      <a class="btn btn-primary" href="account.html?tab=orders">My orders</a></div>`;
+  } else {
+    $('recent').innerHTML = `<div class="panel signed-cta"><div><b>Placed an order?</b>
+      <div class="muted small">Sign in with the same Google account to see all your orders.</div></div>${googleButton('Sign in')}</div>`;
+  }
   if (mine.length) {
-    $('recent').innerHTML = `<h2 class="panel-title">Your recent orders</h2><div class="recent-list">${mine.map(m =>
+    $('recent').insertAdjacentHTML('beforeend', '<div id="recentList"></div>');
+    $('recentList').innerHTML = `<h2 class="panel-title" style="margin-top:22px">Recent orders on this device</h2><div class="recent-list">${mine.map(m =>
       `<button class="recent" data-code="${esc(m.code)}" data-phone="${esc(m.phone)}">
          <b class="mono">${esc(m.code)}${m.seller ? `<span class="muted small"> · ${esc(m.seller)}</span>` : ''}</b><span>${money(m.total)}</span>
          <span class="muted small">${new Date(m.at).toLocaleDateString('en-IN')}</span></button>`).join('')}</div>`;
@@ -78,7 +88,8 @@
     });
   }
 
-  const code = param('code'), phone = param('phone');
+  // ?order=MHC-XXXXXX (older links used ?code=)
+  const code = param('order') || (/^MHC-/i.test(param('code') || '') ? param('code') : null), phone = param('phone');
   if (code) $('code').value = code;
   if (phone) $('phone').value = phone;
   if (code && phone) lookup(code.toUpperCase(), phone);

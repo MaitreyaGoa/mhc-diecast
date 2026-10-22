@@ -1,5 +1,6 @@
 // Product detail page — product.html?id=<uuid>
 (async function () {
+  await window.MHC.ready;   // signed-in buyer's saved cart is loaded first
   const { sb, esc, money, cover, param, Cart, toast, errMsg, getSellers, getSettings, sellerFor, waLink } = window.MHC;
   const box = document.getElementById('product');
   const id = param('id');

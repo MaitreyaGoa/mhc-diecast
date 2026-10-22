@@ -1,10 +1,10 @@
 // Checkout: delivery details → pay each seller by UPI + upload screenshot → order(s) placed.
 // Cars from different sellers are paid separately (one UPI payment and one order per seller).
 (async function () {
+  await window.MHC.ready;   // signed-in buyer's saved cart is loaded first
   const { sb, esc, money, cover, Cart, store, getSettings, getSellers, sellerFor, isGoa,
-          waLink, toast, errMsg } = window.MHC;
+          waLink, toast, errMsg, Auth, googleButton } = window.MHC;
   const $ = id => document.getElementById(id);
-  const DETAILS_KEY = 'mhc_buyer_v1';
   const ORDERS_KEY = 'mhc_orders_v1';
 
   if (!Cart.items().length) { location.replace('cart.html'); return; }
@@ -23,6 +23,18 @@
     $('detailsError').hidden = false;
     $('toPay').disabled = true;
     return;
+  }
+
+  // ---------- sign-in is required to place an order ----------
+  if (!Auth.user) {
+    $('detailsForm').hidden = true;
+    $('signinBox').hidden = false;
+    $('signinBox').innerHTML = `
+      <img class="signin-ico" data-logo src="${esc(window.MHC_LOGO || 'assets/img/logo-192.png')}" alt="">
+      <h2>Sign in to place your order</h2>
+      <p>One tap with your Google account. Your cart is kept, and you can track every order from <b>My account</b> on any device.</p>
+      ${googleButton()}
+      <p class="fine muted">By continuing you agree to our <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy Policy</a>.</p>`;
   }
 
   // ---------- group the cart by seller ----------
@@ -73,9 +85,42 @@
     } else hint.hidden = true;
   }
 
-  // ---------- step 1: details ----------
-  const saved = store.get(DETAILS_KEY, {});
-  ['name', 'phone', 'email', 'address', 'pincode', 'city', 'state'].forEach(k => { if (saved[k]) $(k).value = saved[k]; });
+  // ---------- step 1: details (prefilled from the account) ----------
+  let addresses = [];
+  const ADDR_FIELDS = ['name', 'phone', 'address', 'pincode', 'city', 'state'];
+  function fillAddress(a) {
+    ADDR_FIELDS.forEach(k => { $(k).value = (a && a[k]) || ''; });
+    if (!a) { $('name').value = (Auth.profile && Auth.profile.full_name) || ''; $('phone').value = (Auth.profile && Auth.profile.phone) || ''; }
+    $('saveAddr').checked = !a;
+    $('saveAddrRow').hidden = !!a;
+    renderSummary();
+  }
+  if (Auth.user) {
+    const p = Auth.profile || {};
+    $('signedAs').hidden = false;
+    $('signedAs').innerHTML = `${p.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="" referrerpolicy="no-referrer">`
+      : `<span class="acct-initial">${esc(((p.full_name || Auth.user.email || '?')[0]).toUpperCase())}</span>`}
+      <span>Ordering as <b>${esc(p.full_name || Auth.user.email)}</b> · <span class="muted">${esc(Auth.user.email || '')}</span></span>`;
+    $('email').value = Auth.user.email || '';
+    $('email').readOnly = true;
+    try {
+      const { data } = await sb.from('addresses').select('*').order('is_default', { ascending: false }).order('created_at', { ascending: false });
+      addresses = data || [];
+    } catch (e) { addresses = []; }
+    if (addresses.length) {
+      $('addrPick').hidden = false;
+      $('addrSelect').innerHTML = addresses.map((a, n) =>
+        `<option value="${n}">${esc(a.name)} — ${esc(a.address.slice(0, 40))}${a.address.length > 40 ? '…' : ''}, ${esc(a.pincode)}</option>`).join('') +
+        '<option value="new">+ Deliver to a new address</option>';
+      $('addrSelect').addEventListener('change', e => fillAddress(e.target.value === 'new' ? null : addresses[+e.target.value]));
+    }
+    fillAddress(addresses[0] || null);
+    // editing a saved address offers to save it as a new one
+    ADDR_FIELDS.forEach(k => $(k).addEventListener('input', () => {
+      if ($('addrPick').hidden || $('addrSelect').value === 'new') return;
+      $('saveAddrRow').hidden = false;
+    }));
+  }
   $('pincode').addEventListener('input', () => {
     $('pincode').value = $('pincode').value.replace(/\D/g, '');
     if (isGoa($('pincode').value) && !$('state').value) $('state').value = 'Goa';
@@ -102,10 +147,28 @@
     if (noPay) return showError('detailsError', `${noPay.seller.shop_name} hasn't set up UPI payment yet. Please remove their cars or contact them on WhatsApp.`);
     showError('detailsError', '');
     customer = c;
-    store.set(DETAILS_KEY, c);
+    saveToAccount(c);           // phone + address remembered for next time (doesn't block checkout)
     renderSummary();
     showPayment();
   });
+
+  async function saveToAccount(c) {
+    try {
+      if (Auth.profile && Auth.profile.phone !== c.phone) {
+        await sb.from('profiles').update({ phone: c.phone, updated_at: new Date().toISOString() }).eq('user_id', Auth.user.id);
+        Auth.profile.phone = c.phone;
+      }
+      if ($('saveAddr').checked && !$('saveAddrRow').hidden) {
+        const same = addresses.find(a => ADDR_FIELDS.every(k => String(a[k] || '').trim() === String(c[k] || '').trim()));
+        if (!same) {
+          const row = { name: c.name, phone: c.phone, address: c.address, pincode: c.pincode,
+                        city: c.city || null, state: c.state || null, is_default: !addresses.length };
+          const { data } = await sb.from('addresses').insert(row).select('*').single();
+          if (data) addresses.unshift(data);
+        }
+      }
+    } catch (e) { console.warn('Could not save details to account', e); }
+  }
 
   // ---------- step 2: payment (one card per seller) ----------
   function setStep(n) {
@@ -266,6 +329,7 @@
         if (Math.abs(g.placed.total - g.total) > 0.009) toast(`Note: final total for ${g.seller.shop_name} is ${money(g.placed.total)} (prices updated).`, 'warn');
       } catch (err) {
         let msg = errMsg(err);
+        if (/sign in/i.test(msg)) msg += ' — please refresh the page and sign in again.';
         if (err && err.uploaded) msg += ' If you already paid, message the seller on WhatsApp with your screenshot — they will sort it out or refund you.';
         if (gErr) {
           gErr.innerHTML = esc(msg) + (g.seller.whatsapp ? ` <a href="${esc(waLink(g.seller.whatsapp,
@@ -308,7 +372,9 @@
       </div>`).join('');
     const first = placed[0];
     $('trackLink').href = multi ? 'track.html'
-      : `track.html?code=${encodeURIComponent(first.placed.code)}&phone=${encodeURIComponent(customer.phone)}`;
+      : `track.html?order=${encodeURIComponent(first.placed.code)}&phone=${encodeURIComponent(customer.phone)}`;
+    $('trackLink').textContent = 'View in My account';
+    $('trackLink').href = 'account.html?tab=orders';
     $('summary').hidden = true;
     setStep(2);
   }
