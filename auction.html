@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auctions — MHC Diecast</title>
+  <meta name="description" content="Live diecast auctions from Goa collectors. Sign in with Google, bid, win.">
+  <meta name="theme-color" content="#F5F5F7">
+  <link rel="icon" href="assets/img/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://mmaoniudyamdyfzrxjxt.supabase.co" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script>try{var t=localStorage.getItem('mhc-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;}catch(e){}</script>
+  <link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div id="siteHeader"></div>
+
+<main class="container" id="auc">
+  <!-- ===== list ===== -->
+  <section id="listView" hidden>
+    <div class="auc-head">
+      <div>
+        <h1 class="page-title">Auctions</h1>
+        <p class="muted auc-lead">Collectors list a car, everyone bids, highest bid at the end time wins.</p>
+      </div>
+      <button class="btn btn-primary" id="newBtn">+ Start an auction</button>
+    </div>
+    <div class="chips auc-tabs" id="aucTabs">
+      <button class="chip" data-tab="live">Live</button>
+      <button class="chip" data-tab="ended">Ended</button>
+      <button class="chip" data-tab="mine">My auctions</button>
+      <button class="chip" data-tab="bids">My bids</button>
+    </div>
+    <div id="listBody"></div>
+    <details class="panel auc-rules">
+      <summary>How auctions work</summary>
+      <ol>
+        <li>Sign in with Google. Anyone can list one car with one photo, a starting bid, a minimum increment, an optional Buy Now price and an end time.</li>
+        <li>Each new bid must be at least the current bid + the minimum increment (the first bid at least the starting bid). Lower bids are rejected automatically.</li>
+        <li><b>Final 2 minutes:</b> each new bid must be at least ₹100 higher (or the seller's increment if bigger), and every bid resets the clock to 2 minutes. The auction ends after 2 minutes with no new bid — so last-second sniping doesn't work.</li>
+        <li>You can't bid on your own auction or outbid yourself. Bids can't be withdrawn.</li>
+        <li><b>Buy Now</b> ends the auction immediately at that price.</li>
+        <li>At the end time bidding closes and the highest bidder wins. The winner and seller then see each other's contact details.</li>
+        <li>Payment and delivery are arranged directly between the winner and the seller. MHC Diecast only hosts the auction.</li>
+      </ol>
+    </details>
+  </section>
+
+  <!-- ===== one auction ===== -->
+  <section id="detailView" hidden>
+    <a href="auction.html" class="back" id="backList">← All auctions</a>
+    <div id="detailBody" class="product"></div>
+  </section>
+
+  <!-- ===== start an auction ===== -->
+  <section id="newView" class="narrow-form" hidden>
+    <a href="auction.html" class="back">← All auctions</a>
+    <h1 class="page-title">Start an auction</h1>
+    <div id="newBody"></div>
+  </section>
+</main>
+
+<dialog id="confirmDlg" class="auc-dialog">
+  <form method="dialog">
+    <h3 id="cfTitle">Confirm</h3>
+    <p id="cfText" class="muted"></p>
+    <div class="auc-dialog-actions">
+      <button class="btn btn-ghost" value="no">Cancel</button>
+      <button class="btn btn-primary" value="yes" id="cfYes">Confirm</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="siteFooter"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/logo.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/auction.js"></script>
+</body>
+</html>
