@@ -82,6 +82,12 @@
                  : ['ok', 'Saved carts, addresses and profiles are ready.'];
   });
 
+  await check('Auctions update installed', async () => {
+    const { count, error } = await sb.from('auctions').select('id', { count: 'exact', head: true });
+    return error ? ['warn', 'Not yet — run supabase/phase10-auctions.sql to enable mhcdiecast.com/auction.']
+                 : ['ok', `${count || 0} auction(s) so far.`];
+  });
+
   await check('Payment screenshots are private', async () => {
     const { data, error } = await sb.storage.from('payment-screenshots').list('', { limit: 1 });
     if (error) return ['ok', 'Blocked as expected.'];

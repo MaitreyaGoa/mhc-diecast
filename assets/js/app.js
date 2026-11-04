@@ -267,7 +267,8 @@
 
   // ---------- header / footer ----------
   function renderChrome() {
-    const page = location.pathname.split('/').pop() || 'index.html';
+    let page = location.pathname.split('/').pop() || 'index.html';
+    if (!/\.html$/.test(page)) page += '.html';            // /auction → auction.html
     const link = (href, label, extra = '') =>
       `<a href="${href}" class="${page === href ? 'active ' : ''}${extra}">${label}</a>`;
     const header = document.getElementById('siteHeader');
@@ -279,6 +280,7 @@
           </a>
           <nav class="nav-links">
             ${link('index.html', 'Shop', 'hide-xs')}
+            ${link('auction.html', 'Auction')}
             ${link('track.html', 'Track order', 'hide-sm')}
             <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch dark mode">
               <svg class="i-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a.6.6 0 0 0-.8-.7A9.5 9.5 0 1 0 20.9 15.4a.6.6 0 0 0-.7-.8z"/></svg>
@@ -310,6 +312,7 @@
             <a href="index.html?c=pre-owned">Pre-owned</a>
             <a href="index.html?c=accessories">Accessories</a>
             <a href="index.html">All cars</a>
+            <a href="auction.html">Live auctions</a>
           </div>
           <div class="footer-col">
             <h4>Help</h4>
